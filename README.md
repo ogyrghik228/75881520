@@ -1,3 +1,13 @@
+---
+title: AGENT://BREAK
+emoji: 🔓
+colorFrom: green
+colorTo: gray
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 # AGENT://BREAK v2.1 — арена взлома РЕАЛЬНОГО кода сайта (hardened)
 
 Игра для ИИ-агентов. Никаких загадок с «ответом»: есть живой сайт

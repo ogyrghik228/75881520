@@ -36,16 +36,23 @@ git push -u origin main
 
 ## ШАГ 2. Выбираешь одну площадку и поднимаетесь
 
-### Вариант А — KOYEB (рекомендую: не засыпает, без карты)
+### Вариант А — RENDER из публичной ветки (без подключения GitHub)
 
-1. [koyeb.com](https://www.koyeb.com) → **Sign up** (удобно «Continue with GitHub»).
-2. В панели: **Create Service** (Deploy → Create Web Service).
-3. **Source: GitHub** → выбери репозиторий `agent-break`, ветка `main`.
-4. Builder: **Dockerfile** (определится сам; никаких портов вручную писать не надо).
-5. Instance: **Free** (0.1 vCPU — игре хватает с запасом).
-6. Если спросит Health check path: `/health`.
-7. Нажми **Deploy**. Через 2–5 минут получишь адрес
-   `https://<что-то>.koyeb.app` — он будет виден в карточке сервиса.
+1. [render.com](https://render.com) → регистрация (email / Google / GitHub — репо подключать не нужно).
+2. В панели: **New → Web Service** → источник: **Public Git Repository**.
+3. Вставь URL публичной ветки с игрой и нажми **Connect**:
+   `https://github.com/ogyrghik228/75881520` (ветка `agent-break`).
+   *Для своего репозитория: любая публичная ссылка на GitHub-репо с этими файлами.*
+4. В форме: Name `agent-break` · **Branch: `agent-break`** · Language **Docker**
+   (Dockerfile в корне — команды build/start не нужны) · Instance **Free**.
+5. **Create Web Service** → через 2–3 минуты: `https://agent-break.onrender.com`
+   · проверка: `/health` → `{"version": "2.2.0"}`.
+6. Нюансы: Free засыпает через 15 мин тишины (первый запрос будит ~30–60с);
+   у публичного деплоя нет автоперезаливки — обновляться кнопкой Manual Deploy.
+
+> ⛔ Koyeb больше НЕ бесплатный хостинг: в феврале 2026 его купил Mistral AI,
+> бесплатный Starter закрыт для новых пользователей (только платный Pro).
+> Если у тебя старый аккаунт Koyeb со Starter — старый способ ещё работает.
 
 ### Вариант Б — RENDER (простейший, но спит без трафика)
 
@@ -58,17 +65,22 @@ git push -u origin main
 3. Через пару минут адрес: `https://agent-break.onrender.com`.
 
 ⚠️ Render усыпляет сервис через 15 минут тишины — первый запрос будит его
-за 30–60 секунд. Не нравится — бери Koyeb (вариант А).
+за 30–60 секунд. Совсем без сна — свой сервер (см. ниже).
 
-### Вариант В — HUGGING FACE SPACES
+### Вариант В — HUGGING FACE SPACES (БЕЗ КАРТЫ; SDK — Gradio, не Docker!)
 
-1. [huggingface.co](https://huggingface.co) → регистрация.
-2. Профиль → **New Space** → имя `agent-break` → **SDK: Docker** →
-   Hardware: **CPU basic · Free** → **Create**.
-3. Вкладка **Files** → **Add file → Upload files** → закинь те же 8 файлов
-   в корень спейса → **Commit**.
-   (порт 7860 уже прописан в Dockerfile — больше ничего не нужно)
-4. Адрес: `https://ТВОЙ_ЛОГИН-agent-break.hf.space`.
+> Docker-SDK на HF теперь платный. Но спейсу с SDK **Gradio** всё равно, что
+> за сервер внутри: он просто запускает `app.py` и ждёт порт 7860.
+> Наш `app.py` (в архиве) стартует игру — бесплатно, на CPU basic.
+
+1. [huggingface.co](https://huggingface.co) → регистрация (email, карта НЕ нужна).
+2. Профиль → **New Space** → имя `agent-break` → **SDK: Gradio** →
+   Hardware: **CPU basic · FREE** → **Create**.
+3. Вкладка **Files** → **Add file → Upload files** → закинь ВСЕ файлы архива
+   в КОРЕНЬ спейса (первая строка README.md с `sdk: gradio` — обязательна,
+   она настраивает спейс) → **Commit to main**.
+4. Билд 2–3 минуты → адрес `https://ТВОЙ_ЛОГИН-agent-break.hf.space`
+   · проверка: `/health` → `{"version": "2.2.0"}`.
 
 ---
 
