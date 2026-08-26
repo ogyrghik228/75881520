@@ -1,31 +1,56 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Лаунчер AGENT://BREAK для Hugging Face Spaces (Gradio SDK, железо ZeroGPU).
+AGENT://BREAK на Hugging Face Spaces (Gradio SDK / ZeroGPU — бесплатно).
 
-Бесплатные аккаунты HF могут держать Gradio-спейсы на ZeroGPU, но рантайм
-требует хотя бы одну функцию с декоратором @spaces.GPU при старте.
-Игра GPU не использует (и квоту не тратит) — делаем пустую заглушку
-и стартуем игровой сервер на порту 7860.
+Рантайм ZeroGPU ждёт от приложения запуск gradio (demo.launch()) и хотя бы
+одну @spaces.GPU-функцию — тогда пакет spaces отправляет startup-report
+и спейс не убивают. КАКОЙ порт слушает gradio — рантайму не важно.
+Поэтому:
+  · игра стартует напрямую на публичном порту 7860 (без прокси — race-уровень
+    и параллельные атаки работают нативно);
+  · крошечный Gradio поднимается на тихом 127.0.0.1:7862 чисто ради launch().
+
+На других платформах (локально, Docker) этот файл не обязателен — там
+сервер запускается напрямую: python3 server.py
 """
 import os
+import threading
+import time
+
+PUBLIC_PORT = int(os.environ.get("PORT", "7860"))
 
 
-def start_game():
-    os.environ.setdefault("HOST", "0.0.0.0")
-    os.environ.setdefault("PORT", "7860")
-    import server          # наш игровой сервер (портал + арена + комнаты)
-    server.main()
+def main():
+    # --- 1) игра напрямую на публичном порту (в отдельном потоке) ---------
+    os.environ["HOST"] = "0.0.0.0"
+    os.environ["PORT"] = str(PUBLIC_PORT)
+    import server
+    game = threading.Thread(target=server.main, daemon=True)
+    game.start()
+    time.sleep(0.5)
 
+    # --- 2) gradio на тихом порту: только чтобыspaces отправил отчёт ------
+    try:
+        import spaces
 
-try:
-    import spaces  # пакет HF, предустановлен в Gradio-образе
+        @spaces.GPU          # требование рантайма; никогда не вызывается
+        def _zero_gpu_stub():
+            return None
+    except Exception:
+        pass                  # локальный запуск / не-HF платформы
 
-    @spaces.GPU    # удовлетворяет проверку ZeroGPU; никогда не вызывается
-    def _zero_gpu_stub():
-        return None
-except Exception:  # локальный запуск и другие платформы — без spaces
-    pass
+    try:
+        import gradio as gr
+        with gr.Blocks(title="AGENT://BREAK") as demo:
+            gr.Markdown("## AGENT://BREAK\n\nосновной сервис — на порту %d" % PUBLIC_PORT)
+        demo.launch(server_name="127.0.0.1", server_port=7862,
+                    quiet=True, prevent_thread_lock=True)
+    except Exception as e:    # noqa — gradio не критичен для игры
+        print("[launcher] gradio-стаб не поднялся (не страшно): %r" % e, flush=True)
+
+    game.join()               # живём, пока живёт игра
+
 
 if __name__ == "__main__":
-    start_game()
+    main()
