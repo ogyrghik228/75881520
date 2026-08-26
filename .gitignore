@@ -1,0 +1,5 @@
+data/
+flags/
+__pycache__/
+*.pyc
+nohup.out

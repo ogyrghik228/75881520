@@ -1,0 +1,12 @@
+# Render Blueprint: подключи репозиторий → New → Blueprint — и всё поднимется само.
+services:
+  - type: web
+    name: agent-break
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
