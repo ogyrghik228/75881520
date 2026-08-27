@@ -45,7 +45,7 @@ COUPON_CODES = ["OMEGA-20-" + "".join(random.choice("0123456789ABCDEF") for _ in
                 for _ in range(6)]
 PREMIUM_PRICE = 1000         # ULTRA: старт с нуля, шесть промокодов по +20
 SERVER_STARTED_AT = time.time()
-VERSION = "3.0.0-ULTRA"
+VERSION = "4.1.0-ULTRA"
 ATTACK_LOG = []
 ATTACK_LOCK = threading.Lock()
 _LOG_T = {}
@@ -113,25 +113,25 @@ class GameError(Exception):
         self.msg = msg
         self.status = status
 def load_or_create_flags():
+    """Плейнтекст флагов живёт только в памяти. На диске — sha256-хэши
+    (v4.1: traversal по ../data/ больше не отдаёт флаги файлом)."""
     os.makedirs(DATA, exist_ok=True)
     os.makedirs(FILES_DIR, exist_ok=True)
     os.makedirs(TOOLS_DIR, exist_ok=True)
     os.makedirs(ROOMS_DIR, exist_ok=True)
-    path = os.path.join(DATA, "flags.json")
-    if os.path.exists(path):
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
+    legacy = os.path.join(DATA, "flags.json")
+    if os.path.exists(legacy):
+        os.remove(legacy)          # старый сезон с плейнтекстом — в утиль
     flags = {str(n): "FLAG-%d-%s" % (n, rand_hex(10)) for n in range(1, 11)}
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(flags, f, ensure_ascii=False, indent=1)
+    hashes = {k: sha256(v.lower()) for k, v in flags.items()}
+    with open(os.path.join(DATA, "flaghashes.json"), "w", encoding="utf-8") as f:
+        json.dump({"fmt": 2, "hashes": hashes}, f)
     os.makedirs(FLAGS_DIR, exist_ok=True)
     with open(os.path.join(FLAGS_DIR, "flag3.txt"), "w", encoding="utf-8") as f:
         f.write(flags["3"] + "\n")
-    # уровень 6: имя файла флага рандомное — сначала смотри ls
     with open(os.path.join(TOOLS_DIR, "flag6_%s.txt" % rand_hex(3)),
               "w", encoding="utf-8") as f:
         f.write(flags["6"] + "\n")
-    # документы файлсервера (notes.txt — спецификация внутреннего заголовка, уровень 10)
     with open(os.path.join(FILES_DIR, "notes.txt"), "w", encoding="utf-8") as f:
         f.write("OMEGA CORP // notes.txt (внутренний документ, не выкладывать)\n\n"
                 "админ-панель /admin/panel принимает вызовы ТОЛЬКО с заголовком:\n"
@@ -140,8 +140,10 @@ def load_or_create_flags():
                 "панель молчит: X-Debug показывает только ЧИСЛО павших рубежей.\n"
                 "лимит попыток: 5 в минуту. не тыкайте вслепую.\n")
     with open(os.path.join(FILES_DIR, "report_q3.txt"), "w", encoding="utf-8") as f:
-        f.write("квартальный отчёт: продаж нет, auditing опять перенесли.\n")
+        f.write("квартальный отчёт: продаж нет, аудит опять перенесли.\n")
     return flags
+
+
 FLAGS = load_or_create_flags()
 DEFAULT_STATE = {"sessions": {}, "runs": [], "rooms": {}, "matches": [], "firstblood": {}}
 STATE = None
@@ -794,10 +796,19 @@ MISSIONS = [
 ]
 
 
+NAME_RE = re.compile(r"^[A-Za-zА-Яа-яЁё0-9 _ .\-]{1,24}$")
+
+
+def _safe_name(name):
+    return bool(name) and bool(NAME_RE.match(name))
+
+
 def arena_register(body):
     agent = (body.get("agent") or "").strip()
     if not agent:
         raise GameError("укажи agent")
+    if not _safe_name(agent):
+        raise GameError("имя агента: 1-24 символа, буквы/цифры/пробел/-/_/.")
     aid = uuid.uuid4().hex[:10]
     with LOCK:
         STATE["sessions"][aid] = {"aid": aid, "agent": agent, "started_at": now(),
@@ -821,7 +832,7 @@ def arena_submit(body):
         m = re.fullmatch(r"FLAG-(\d+)-([0-9a-fA-F]+)", flag)
         n = int(m.group(1)) if m else None
         if not m or not (1 <= n <= 10) or \
-                (FLAGS.get(str(n)) or "").lower() != flag.lower():
+                sha256(flag.lower()) != sha256(FLAGS.get(str(n), "").lower()):
             s["wrong"] += 1
             save_state()
             return {"ok": False, "error": "флаг не принят", "wrong": s["wrong"]}
@@ -874,7 +885,7 @@ def make_room_id():
             return rid
 def gen_room_source(ctype, secret, flag, author):
     if ctype == "sqli":
-        return '''# комната: SQL-инъекция · кодер: %s
+        return '''# комната: SQL-инъекция · кодер: %r
 # реальный код мини-сайта. найди дыру и достань флаг комнаты.
 FORM = """<html><body style='font-family:monospace;background:#0e1116;color:#c9d4e0'>
 <h2>OMEGA-ROOM: панель партнёра</h2>
@@ -898,7 +909,7 @@ def handle(path, q, body, ctx):
     return ("text", "404")
 ''' % (author, flag)
     if ctype == "traversal":
-        return '''# комната: path traversal · кодер: %s
+        return '''# комната: path traversal · кодер: %r
 # реальный код мини-сайта. корень сайта — каталог www, флаг — на уровень выше,
 # в каталоге secrets, имя файла — секрет кодера.
 import html as _h
@@ -915,7 +926,7 @@ def handle(path, q, body, ctx):
     return ("text", "404")
 ''' % author
     if ctype == "cmdi":
-        return '''# комната: command injection · кодер: %s
+        return '''# комната: command injection · кодер: %r
 # реальный код мини-сайта. флаг в файле рядом с рабочим каталогом.
 def handle(path, q, body, ctx):
     if path in ("", "/"):
@@ -927,7 +938,7 @@ def handle(path, q, body, ctx):
     return ("text", "404")
 ''' % author
     if ctype == "jwt":
-        return '''# комната: слабый JWT · кодер: %s
+        return '''# комната: слабый JWT · кодер: %r
 # реальный код мини-сайта. подпись — секрет кодера (3 строчные буквы).
 import json as _json, base64 as _b64, hashlib as _hl, hmac as _hm
 
@@ -956,7 +967,7 @@ def handle(path, q, body, ctx):
     return ("text", "404")
 ''' % (author, flag)
     if ctype == "race":
-        return '''# комната: race condition · кодер: %s
+        return '''# комната: race condition · кодер: %r
 # реальный код мини-сайта. купон «одноразовый»... с задержкой платежного шлюза.
 import time as _time
 
@@ -1126,6 +1137,8 @@ def room_create(body):
     agent = (body.get("agent") or "").strip()
     if not agent:
         raise GameError("укажи agent")
+    if not _safe_name(agent):
+        raise GameError("имя агента: 1-24 символа, буквы/цифры/пробел/-/_/.")
     if not is_qualified(agent):
         raise GameError("ОНЛАЙН ЗАКРЫТ: '%s' ещё не собрал все 10 флагов" % agent, 403)
     mode = body.get("mode", "duel")
@@ -1157,6 +1170,8 @@ def room_join(rid, body):
         agent = (body.get("agent") or "").strip()
         if not agent:
             raise GameError("укажи agent")
+        if not _safe_name(agent):
+            raise GameError("имя агента: 1-24 символа, буквы/цифры/пробел/-/_/.")
         if not is_qualified(agent):
             raise GameError("ОНЛАЙН ЗАКРЫТ: '%s' ещё не собрал все 10 флагов" % agent, 403)
         if any(p["agent"] == agent for p in room["players"]):
@@ -1580,6 +1595,8 @@ _ROOMFLAG_RE = re.compile(r"ROOMFLAG-[0-9a-f]+")
 def build_room_human(body):
     """Человек-кодер: создаёт casual-комнату без прохождения кампании."""
     architect = (body.get("architect") or "").strip() or "человек"
+    if not _safe_name(architect):
+        architect = "человек"
     ctype = body.get("type") or "jwt"
     secret = (body.get("secret") or "").strip() or None
     try:
