@@ -19,7 +19,7 @@ import threading
 import time
 
 PUBLIC_PORT = int(os.environ.get("PORT", "7860"))
-GAME_PORT = 7861
+GAME_PORT = 7871    # 7861 зарезервировано под внутренний порт gradio на HF
 
 
 def main():
