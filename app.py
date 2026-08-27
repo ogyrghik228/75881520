@@ -124,8 +124,34 @@ def main():
     routes = [Route(p, proxy, methods=methods) for p in game_paths]
     routes += [Route(p, proxy, methods=methods) for p in game_prefixes]
     routes += [Route(p + "/{rest:path}", proxy, methods=methods) for p in game_prefixes]
-    for r in routes:
-        app.router.routes.insert(0, r)
+
+    def install_routes():
+        # игровые маршруты — В САМОЕ НАЧАЛО списка
+        rs = app.router.routes
+        for r in routes:
+            if r in rs:
+                rs.remove(r)
+            rs.insert(0, r)
+
+    install_routes()
+
+    # СТРАЖ: обвязка gradio на HF добавляет свой Mount ПОСЛЕ нашего старта
+    # и перекрывает маршруты игры — возвращаем их на место каждые 3 секунды
+    def routes_watchdog():
+        n = 0
+        while True:
+            time.sleep(3)
+            try:
+                rs = app.router.routes
+                if not all(r is rs[i] for i, r in enumerate(routes)):
+                    install_routes()
+                    n += 1
+                    print("[launcher] страж вернул маршруты игры (перехват №%d)" % n,
+                          flush=True)
+            except Exception as e:  # noqa
+                print("[launcher] страж: %r" % e, flush=True)
+
+    threading.Thread(target=routes_watchdog, daemon=True).start()
 
     print("[launcher] прокси игры навешан: %d маршрутов" % len(routes), flush=True)
     while True:
