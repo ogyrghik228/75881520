@@ -50,7 +50,7 @@ COUPON_CODES = ["OMEGA-25-" + "".join(random.choice("0123456789ABCDEF") for _ in
 PREMIUM_PRICE = 500          # уровень 9: старт с нуля, пять промокодов по +25
 
 SERVER_STARTED_AT = time.time()
-VERSION = "2.2.0"
+VERSION = "2.2.1"
 
 # ---------------------------------------------------------------- живая лента
 ATTACK_LOG = []
@@ -58,18 +58,41 @@ ATTACK_LOCK = threading.Lock()
 _LOG_T = {}
 
 
+FEED_FILE = os.path.join(DATA, "feed.jsonl")
+
+
 def log_attack(kind, who, text, level=None, throttle=None):
-    """kind: hack / try / info. throttle — строка-ключ: не чаще раза в 2с."""
+    """kind: hack / try / info. throttle — строка-ключ: не чаще раза в 2с.
+    События дублируются на диск — лента переживает перезапуск сервера."""
     t = now()
     if throttle:
         with ATTACK_LOCK:
             if t - _LOG_T.get(throttle, 0) < 2.0:
                 return
             _LOG_T[throttle] = t
+    ev = {"t": t, "kind": kind, "who": who or "аноним", "text": text, "level": level}
     with ATTACK_LOCK:
-        ATTACK_LOG.append({"t": t, "kind": kind, "who": who or "аноним",
-                           "text": text, "level": level})
+        ATTACK_LOG.append(ev)
         del ATTACK_LOG[:-300]
+    try:
+        with open(FEED_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(ev, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def load_feed():
+    """Восстановление ленты после перезапуска (режим sleep/wake хостинга)."""
+    if not os.path.exists(FEED_FILE):
+        return
+    try:
+        with open(FEED_FILE, encoding="utf-8") as f:
+            events = [json.loads(ln) for ln in f if ln.strip()]
+        with ATTACK_LOCK:
+            ATTACK_LOG.extend(events[-300:])
+            del ATTACK_LOG[:-300]
+    except (ValueError, OSError):
+        pass
 
 
 def recent_feed(n=25):
@@ -2035,6 +2058,8 @@ def main():
     APP_PORT = args.port
     load_state()
     init_db()
+    load_feed()
+    log_attack("info", "system", "сервер поднят · данные сезона сохранены")
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     print("AGENT://BREAK v2 on http://%s:%d  (портал: /  · арена: /arena)" % (args.host, args.port), flush=True)
     httpd.serve_forever()
