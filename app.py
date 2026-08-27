@@ -3,26 +3,33 @@
 """
 AGENT://BREAK на Hugging Face Spaces (Gradio SDK / ZeroGPU — бесплатно).
 
-Рантайм ZeroGPU детектит GPU-функции по SAMOMУ gradio-приложению на публичном
-порту (зависимости/конфиг), а не по startup-report. Поэтому:
-  · gradio живёт на публичном 7860, и в нём есть кнопка на @spaces.GPU-функции
-    (квота не тратится — кнопка вежливая);
-  · стартовый отчёт шлём и вручную (spaces.zero.client.startup_report) —
-    на случай hot-reload;
-  · ВЕСЬ остальной трафик проксируется в игру (внутренний порт 7861),
-    поэтому /, /arena, /health и API работают как раньше.
+Три вещи, которые требует/ломает рантайм HF:
+  1) hot-reload у gradio на HF подменяет приложение ПОСЛЕ launch() —
+     запрещаем его переменной окружения ДО импорта gradio;
+  2) рантайм хочет @spaces.GPU-функцию и gradio на публичном порту —
+     даём кнопку-заглушку (квота не тратится) + ручной startup-report;
+  3) прокси в игру вешаем ТОЛЬКО на точные маршруты игры — внутренние
+     пути gradio (/config, /_app/, ...) не перехватываем.
 
+Игра сама — поток на внутреннем порту 7871 (7861 забирает gradio).
 На других платформах файл не обязателен: python3 server.py
 """
 import os
+
+os.environ["GRADIO_HOT_RELOAD"] = "0"     # ключевой фикс №1 (до импорта gradio)
+
 import threading
 import time
 
 PUBLIC_PORT = int(os.environ.get("PORT", "7860"))
-GAME_PORT = 7871    # 7861 зарезервировано под внутренний порт gradio на HF
+GAME_PORT = 7871
+
+demo = None  # hot-reload ищет demo в __main__ — пусть находит
 
 
 def main():
+    global demo
+
     # --- 1) игра на внутреннем порту ----------------------------------------
     os.environ["HOST"] = "127.0.0.1"
     os.environ["PORT"] = str(GAME_PORT)
@@ -30,7 +37,7 @@ def main():
     threading.Thread(target=server.main, daemon=True).start()
     time.sleep(0.5)
 
-    # --- 2) gradio на публичном порту: кнопка на @spaces.GPU ----------------
+    # --- 2) gradio на публичном порту + @spaces.GPU кнопка -------------------
     import gradio as gr
 
     gpu_fn = None
@@ -51,19 +58,20 @@ def main():
 
     handler = gpu_fn if gpu_fn is not None else plain_ping
 
-    with gr.Blocks(title="AGENT://BREAK") as demo:
+    with gr.Blocks(title="AGENT://BREAK") as d:
         gr.Markdown("## AGENT://BREAK — арена взлома для ИИ-агентов\n"
-                    "основная игра: `/` · арена: `/arena` · карта: `/arena/map`")
+                    "игра: `/` · арена: `/arena` · карта: `/arena/map` · stats: `/arena/api/stats`")
         with gr.Row():
             inp = gr.Textbox(label="gpu self-check (не обязателен)", value="ok")
             out = gr.Textbox(label="ответ")
             btn = gr.Button("проверить")
         btn.click(handler, inputs=inp, outputs=out)
+    demo = d
 
     app, _url, _ = demo.launch(server_name="0.0.0.0", server_port=PUBLIC_PORT,
                                quiet=True, prevent_thread_lock=True)
 
-    # --- 3) ручной startup-report (страховка от hot-reload) ------------------
+    # --- 3) ручной startup-report (страховка) --------------------------------
     try:
         from spaces.config import Config
         if Config.zero_gpu:
@@ -79,7 +87,7 @@ def main():
     except Exception:
         pass
 
-    # --- 4) прокси: весь остальной трафик -> игра ---------------------------
+    # --- 4) прокси ТОЛЬКО на маршруты игры (внутренности gradio не трогаем) --
     import httpx
     from starlette.requests import Request
     from starlette.responses import Response
@@ -107,9 +115,19 @@ def main():
         return Response(r.content, status_code=r.status_code, headers=dict(raw))
 
     methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
-    app.router.routes.insert(0, Route("/{rest:path}", proxy, methods=methods))
-    app.router.routes.insert(0, Route("/", proxy, methods=methods))
+    # точные корни игры (с вариантами «с хвостом»); gradio-пути не перехватываем
+    game_paths = ["/", "/health", "/wiki", "/login", "/logout", "/profile",
+                  "/ops", "/reset", "/search", "/forgot",
+                  "/static/portal.js", "/api/notify"]
+    game_prefixes = ["/files", "/tools", "/wallet", "/admin", "/arena",
+                     "/rooms", "/api2", "/search", "/forgot"]
+    routes = [Route(p, proxy, methods=methods) for p in game_paths]
+    routes += [Route(p, proxy, methods=methods) for p in game_prefixes]
+    routes += [Route(p + "/{rest:path}", proxy, methods=methods) for p in game_prefixes]
+    for r in routes:
+        app.router.routes.insert(0, r)
 
+    print("[launcher] прокси игры навешан: %d маршрутов" % len(routes), flush=True)
     while True:
         time.sleep(3600)
 
