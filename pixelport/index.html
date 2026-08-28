@@ -1,0 +1,2286 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#091226" />
+  <title>PIXELPORT — студия покадрового рисования</title>
+  <style>
+    :root {
+      --ink: #081020;
+      --deep: #0b1730;
+      --panel: #101e39;
+      --panel-2: #132643;
+      --line: #28405e;
+      --line-bright: #3e638d;
+      --muted: #8494b4;
+      --text: #edf5ff;
+      --cyan: #7be9eb;
+      --blue: #4c9fe4;
+      --yellow: #ffd55d;
+      --orange: #ff9668;
+      --pink: #fc7193;
+      --violet: #a685f7;
+      --green: #7ad58e;
+      --shadow: #040915;
+      --pixel: 4px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      color: var(--text);
+    }
+
+    * { box-sizing: border-box; }
+    html { min-width: 320px; background: var(--ink); }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background-color: var(--ink);
+      background-image:
+        linear-gradient(rgba(108, 157, 213, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(108, 157, 213, .045) 1px, transparent 1px),
+        radial-gradient(circle at 72% -16%, rgba(56, 129, 207, .2), transparent 33rem),
+        radial-gradient(circle at 18% 85%, rgba(117, 72, 180, .12), transparent 30rem);
+      background-size: 24px 24px, 24px 24px, auto, auto;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--cyan);
+      outline-offset: 3px;
+    }
+    ::selection { color: var(--ink); background: var(--cyan); }
+
+    .pixel-corner {
+      position: fixed;
+      z-index: -1;
+      width: 168px;
+      height: 168px;
+      opacity: .38;
+      pointer-events: none;
+      background-image: linear-gradient(90deg, transparent 0 68%, rgba(123,233,235,.55) 68% 76%, transparent 76%), linear-gradient(transparent 0 68%, rgba(123,233,235,.55) 68% 76%, transparent 76%);
+      background-size: 24px 24px;
+    }
+    .pixel-corner.one { top: 0; right: 0; mask-image: linear-gradient(135deg, #000, transparent 76%); }
+    .pixel-corner.two { bottom: 0; left: 86px; transform: rotate(180deg); mask-image: linear-gradient(135deg, #000, transparent 76%); }
+
+    .app-shell { min-height: 100vh; padding-left: 88px; }
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 10;
+      width: 88px;
+      border-right: 1px solid #203854;
+      background: rgba(7, 16, 32, .93);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px 10px 14px;
+      backdrop-filter: blur(14px);
+    }
+    .brand-glyph {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 3px;
+      padding: 4px;
+      border: 2px solid var(--cyan);
+      box-shadow: 4px 4px 0 rgba(123,233,235,.18);
+      background: #112743;
+    }
+    .brand-glyph b { display: block; background: transparent; }
+    .brand-glyph b:nth-child(1), .brand-glyph b:nth-child(2), .brand-glyph b:nth-child(5), .brand-glyph b:nth-child(6), .brand-glyph b:nth-child(9), .brand-glyph b:nth-child(10), .brand-glyph b:nth-child(14), .brand-glyph b:nth-child(15) { background: var(--cyan); }
+    .brand-glyph b:nth-child(3), .brand-glyph b:nth-child(7), .brand-glyph b:nth-child(11) { background: var(--violet); }
+    .brand-word {
+      margin: 11px 0 26px;
+      color: var(--cyan);
+      font-size: 8px;
+      letter-spacing: .14em;
+      line-height: 1.65;
+      text-align: center;
+    }
+    .main-nav { width: 100%; display: grid; gap: 10px; }
+    .nav-button {
+      position: relative;
+      width: 100%;
+      min-height: 54px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      padding: 6px 2px;
+      color: #8798b7;
+      display: grid;
+      place-items: center;
+      gap: 4px;
+      transition: .16s ease;
+    }
+    .nav-button:hover { color: var(--text); background: rgba(55, 95, 139, .14); }
+    .nav-button.active { color: var(--cyan); border-color: #315578; background: #132945; box-shadow: inset 3px 0 var(--cyan); }
+    .nav-icon {
+      width: 19px;
+      height: 19px;
+      display: block;
+      position: relative;
+      border: 2px solid currentColor;
+      image-rendering: pixelated;
+    }
+    .nav-icon.studio::before { content: ""; position: absolute; width: 4px; height: 4px; background: currentColor; left: 3px; top: 3px; box-shadow: 6px 0 currentColor, 0 6px currentColor, 6px 6px currentColor; }
+    .nav-icon.frames { border-color: transparent; background: linear-gradient(currentColor 0 0) 0 2px / 100% 3px no-repeat, linear-gradient(currentColor 0 0) 0 8px / 100% 3px no-repeat, linear-gradient(currentColor 0 0) 0 14px / 100% 3px no-repeat; }
+    .nav-icon.frames::after { content: ""; position: absolute; right: 0; top: 0; width: 4px; height: 4px; background: currentColor; box-shadow: 0 6px currentColor, 0 12px currentColor; }
+    .nav-icon.gallery { border-radius: 0; }
+    .nav-icon.gallery::before { content: ""; position: absolute; width: 5px; height: 5px; background: currentColor; left: 3px; top: 3px; box-shadow: 6px 5px currentColor, 0 7px currentColor; }
+    .nav-icon.agents { border-color: transparent; background: currentColor; clip-path: polygon(35% 0,65% 0,65% 18%,88% 18%,88% 77%,70% 77%,70% 100%,30% 100%,30% 77%,12% 77%,12% 18%,35% 18%); }
+    .nav-icon.guide { border-color: transparent; }
+    .nav-icon.guide::before, .nav-icon.guide::after { content: ""; position:absolute; background: currentColor; }
+    .nav-icon.guide::before { width: 16px; height: 3px; left: 1px; top: 8px; }
+    .nav-icon.guide::after { width: 3px; height: 16px; left: 8px; top: 1px; }
+    .nav-label { font-size: 8px; line-height: 1; letter-spacing: .03em; }
+    .side-bottom { margin-top: auto; display: grid; justify-items: center; gap: 12px; }
+    .local-dot { width: 8px; height: 8px; background: var(--green); box-shadow: 0 0 0 3px rgba(122,213,142,.12), 0 0 15px rgba(122,213,142,.45); }
+    .side-version { color: #586b8d; font-size: 8px; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: .16em; }
+
+    .topbar {
+      min-height: 76px;
+      padding: 15px 28px 14px 30px;
+      border-bottom: 1px solid rgba(43, 69, 103, .72);
+      background: rgba(8, 16, 32, .67);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      backdrop-filter: blur(14px);
+      position: sticky;
+      z-index: 8;
+      top: 0;
+    }
+    .project-heading { min-width: 0; display: flex; align-items: center; gap: 12px; }
+    .project-mark { position: relative; width: 30px; height: 30px; flex: 0 0 30px; border: 1px solid #497ba1; background: #142b49; }
+    .project-mark::before { content: ""; position: absolute; left: 5px; top: 5px; width: 7px; height: 7px; background: var(--yellow); box-shadow: 7px 7px var(--orange), 14px 0 var(--pink); }
+    .project-title-wrap { min-width: 0; }
+    .eyebrow { color: #7487a7; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; line-height: 1.25; }
+    .project-name-row { display: flex; align-items: center; gap: 8px; }
+    #projectName {
+      max-width: 250px;
+      border: 0;
+      padding: 1px 0 2px;
+      border-bottom: 1px solid transparent;
+      background: transparent;
+      color: var(--text);
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: .025em;
+      text-overflow: ellipsis;
+    }
+    #projectName:hover, #projectName:focus { border-bottom-color: var(--cyan); }
+    .saved-state { color: var(--green); font-size: 9px; white-space: nowrap; }
+    .top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+    .button, .icon-button, .tool-button, .seg-button {
+      border: 1px solid #3b597b;
+      background: #152944;
+      color: #dcecff;
+      cursor: pointer;
+      min-height: 34px;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      box-shadow: 2px 2px 0 #071222;
+    }
+    .button:hover, .icon-button:hover, .tool-button:hover, .seg-button:hover { background: #1c385b; border-color: #659bc4; transform: translate(-1px, -1px); }
+    .button:active, .icon-button:active, .tool-button:active, .seg-button:active { transform: translate(1px, 1px); box-shadow: none; }
+    .button { padding: 0 12px; font-size: 11px; letter-spacing: .02em; }
+    .button.primary { color: #071425; font-weight: 800; background: var(--cyan); border-color: var(--cyan); box-shadow: 3px 3px 0 #275b77; }
+    .button.primary:hover { background: #a0ffff; border-color: #a0ffff; }
+    .button.warning { color: #301b0d; background: var(--yellow); border-color: var(--yellow); }
+    .button.ghost { background: transparent; color: #99acc8; }
+    .button.tiny { min-height: 27px; padding: 0 8px; font-size: 9px; }
+    .icon-button { width: 34px; padding: 0; display: inline-grid; place-items: center; font-size: 16px; }
+    .export-wrap { position: relative; }
+    .export-menu {
+      position: absolute;
+      z-index: 30;
+      display: none;
+      top: calc(100% + 8px);
+      right: 0;
+      min-width: 216px;
+      padding: 7px;
+      border: 1px solid #41698d;
+      background: #10213a;
+      box-shadow: 5px 5px 0 #050b16, 0 12px 28px rgba(0,0,0,.38);
+    }
+    .export-wrap.open .export-menu { display: grid; gap: 4px; }
+    .export-menu button { text-align: left; padding: 9px 10px; border: 0; background: transparent; color: #d4e2f3; cursor: pointer; font-size: 11px; }
+    .export-menu button:hover { color: var(--cyan); background: #173451; }
+    .export-menu small { display: block; margin-top: 2px; color: #7285a7; font-size: 8px; }
+
+    main { padding: 26px 30px 34px; max-width: 1740px; margin: auto; }
+    .view { display: none; animation: view-in .22s ease both; }
+    .view.active { display: block; }
+    @keyframes view-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    .intro-line { display: flex; align-items: end; justify-content: space-between; margin: 0 0 19px; gap: 20px; }
+    .intro-line h1, .intro-line h2 { margin: 0; font-size: clamp(19px, 2vw, 27px); letter-spacing: .035em; }
+    .intro-line p { max-width: 620px; margin: 8px 0 0; color: #91a3c1; font-size: 11px; line-height: 1.7; }
+    .pixel-tag { align-self: center; border: 1px solid #325a72; color: var(--cyan); padding: 6px 8px; background: rgba(16,43,65,.7); font-size: 9px; letter-spacing: .08em; white-space: nowrap; }
+    .pixel-tag b { color: var(--yellow); }
+
+    .studio-layout {
+      display: grid;
+      grid-template-columns: 242px minmax(410px, 1fr) 263px;
+      gap: 16px;
+      align-items: start;
+    }
+    .panel {
+      border: 1px solid #294562;
+      background: linear-gradient(135deg, rgba(19,38,65,.96), rgba(13,29,51,.96));
+      box-shadow: 4px 4px 0 rgba(4,9,20,.7);
+    }
+    .panel-head {
+      min-height: 38px;
+      padding: 0 11px;
+      border-bottom: 1px solid rgba(60,95,127,.6);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .panel-head h3 { margin: 0; color: #dcecfb; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+    .panel-head .sub { color: #7186a5; font-size: 8px; }
+    .panel-body { padding: 12px; }
+    .tools-panel { overflow: hidden; }
+    .tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+    .tool-button { min-height: 58px; padding: 7px 5px; font-size: 9px; display: grid; justify-items: center; align-content: center; gap: 5px; color: #a9bed7; }
+    .tool-button.active { color: var(--cyan); background: #1a3856; border-color: var(--cyan); box-shadow: inset 0 0 0 1px rgba(123,233,235,.16), 2px 2px 0 #071222; }
+    .tool-symbol { position: relative; width: 17px; height: 17px; display: block; }
+    .sym-brush { border: 3px solid currentColor; border-top: 0; transform: rotate(-45deg); width: 9px; height: 17px; margin-top: -2px; }
+    .sym-brush::after { content: ""; position: absolute; width: 7px; height: 4px; left: -2px; top: -5px; border: 2px solid currentColor; }
+    .sym-eraser { background: currentColor; transform: skew(-18deg); width: 14px; height: 11px; margin-top: 3px; }
+    .sym-eraser::after { content: ""; position:absolute; left: 0; right: 0; bottom: -4px; height: 4px; background: #415675; }
+    .sym-fill { border: 2px solid currentColor; transform: rotate(45deg); width: 13px; height: 13px; }
+    .sym-fill::after { content:""; position:absolute; width: 5px; height: 5px; background: currentColor; left: 8px; top: 8px; transform: rotate(-45deg); }
+    .sym-picker { width: 5px; height: 17px; background: currentColor; transform: rotate(45deg); }
+    .sym-picker::after { content:""; position:absolute; width: 11px; height: 7px; border: 2px solid currentColor; left: -3px; top: -4px; }
+    .sym-line { border-top: 3px solid currentColor; transform: rotate(-42deg); margin-top: 7px; }
+    .sym-hand { border: 2px solid currentColor; width: 12px; height: 15px; border-radius: 6px 6px 3px 3px; }
+
+    .rule { height: 1px; margin: 13px 0; background: #29435f; }
+    .control-label { color: #91a5c2; font-size: 9px; letter-spacing: .07em; text-transform: uppercase; display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .value-chip { padding: 3px 5px; color: var(--cyan); background: #122c48; border: 1px solid #345c7b; font-size: 8px; }
+    .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .seg-button { min-height: 30px; padding: 0; font-size: 10px; color: #94a9c5; }
+    .seg-button.active { border-color: var(--cyan); color: var(--cyan); background: #193854; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; min-height: 33px; color: #a7b9d2; font-size: 10px; }
+    .pixel-switch { appearance: none; width: 32px; height: 16px; margin: 0; border: 1px solid #3a5775; background: #0b1628; cursor: pointer; position: relative; }
+    .pixel-switch::after { content:""; position: absolute; top: 3px; left: 3px; width: 8px; height: 8px; background: #6a7b98; transition: .15s; }
+    .pixel-switch:checked { border-color: #56a8ba; background: #123d52; }
+    .pixel-switch:checked::after { transform: translateX(14px); background: var(--cyan); }
+    .color-readout { display: grid; grid-template-columns: 39px 1fr; gap: 9px; align-items: center; }
+    .active-color {
+      width: 39px; height: 39px; border: 2px solid #d9ebf7; background: var(--yellow);
+      box-shadow: 3px 3px 0 #081323, inset 0 0 0 3px rgba(255,255,255,.16);
+    }
+    .color-hex { color: #d9e8f7; font-size: 12px; }
+    .color-hint { color: #7185a4; margin-top: 3px; font-size: 8px; }
+    .color-picker-line { display: flex; gap: 7px; margin-top: 10px; }
+    input[type="color"] { width: 37px; height: 29px; padding: 2px; border: 1px solid #496f91; background: #0c1930; cursor: pointer; }
+    .palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+    .swatch { aspect-ratio: 1; min-width: 0; border: 2px solid rgba(211,233,255,.19); background: var(--swatch); cursor: pointer; box-shadow: 2px 2px 0 #081221; }
+    .swatch:hover { transform: translate(-1px, -1px); border-color: #fff; }
+    .swatch.selected { outline: 2px solid var(--cyan); outline-offset: 2px; border-color: #fff; }
+    .palette-note { margin: 9px 0 0; color: #6e83a4; font-size: 8px; line-height: 1.5; }
+
+    .workbench { min-width: 0; }
+    .canvas-panel { overflow: hidden; }
+    .canvas-head-tools { display: flex; align-items: center; gap: 6px; }
+    .zoom-display { color: #91a8c6; font-size: 9px; padding-right: 3px; }
+    .canvas-stage {
+      position: relative;
+      min-height: 568px;
+      padding: clamp(15px, 2vw, 27px);
+      display: grid;
+      place-items: center;
+      overflow: auto;
+      scrollbar-color: #477a9a #09172d;
+      background:
+        linear-gradient(90deg, rgba(87,134,182,.07) 1px, transparent 1px),
+        linear-gradient(rgba(87,134,182,.07) 1px, transparent 1px),
+        #0b1830;
+      background-size: 22px 22px;
+    }
+    .canvas-stage::before, .canvas-stage::after { content:""; position:absolute; width: 36px; height: 36px; border-color:#4987ad; pointer-events:none; opacity:.7; }
+    .canvas-stage::before { border-left: 2px solid; border-top: 2px solid; top: 12px; left: 12px; }
+    .canvas-stage::after { border-right: 2px solid; border-bottom: 2px solid; right: 12px; bottom: 12px; }
+    #editorCanvas {
+      position: relative;
+      z-index: 1;
+      display: block;
+      max-width: none;
+      max-height: none;
+      border: 2px solid #6e9fbc;
+      background: #111d31;
+      box-shadow: 7px 7px 0 #050b15, 0 0 0 4px rgba(19,57,78,.72);
+      image-rendering: pixelated;
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .canvas-status {
+      position: absolute; z-index: 2; left: 22px; bottom: 21px;
+      border: 1px solid #345e7c; padding: 6px 7px; background: rgba(8,19,37,.88);
+      color: #91a8c3; font-size: 8px; line-height: 1.55; pointer-events: none;
+    }
+    .canvas-status strong { color: var(--cyan); font-size: 9px; }
+    .canvas-watermark {
+      position: absolute; z-index: 2; right: 22px; top: 20px; color: rgba(169,204,231,.38);
+      font-size: 8px; letter-spacing: .13em; text-align:right; line-height:1.5; pointer-events:none;
+    }
+    .canvas-footer { padding: 9px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #8196b4; font-size: 9px; }
+    .hotkeys { color: #7187a7; }
+    .hotkeys b { color: #a6bed9; font-weight: normal; }
+    .frame-counter { color: var(--cyan); white-space: nowrap; }
+
+    .right-stack { display: grid; gap: 16px; }
+    .layer-list { padding: 7px; display: grid; gap: 4px; }
+    .layer-row {
+      min-height: 41px; display: grid; grid-template-columns: 23px 1fr 20px; align-items:center; gap:6px;
+      padding: 5px; border: 1px solid transparent; color: #95a9c7; cursor: pointer;
+    }
+    .layer-row:hover { background: #183550; }
+    .layer-row.active { background: #193a59; border-color: #47799e; color: #edf8ff; box-shadow: inset 3px 0 var(--cyan); }
+    .layer-badge { width: 19px; height: 19px; border: 1px solid #4a718e; display:grid; place-items:center; font-size: 8px; color:var(--cyan); }
+    .layer-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+    .visible-toggle { width: 18px; height: 18px; padding:0; border:0; color:#96b0ca; background:transparent; cursor:pointer; font-size:12px; }
+    .visible-toggle.off { color:#4a607d; }
+    .panel-action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px; border-top:1px solid #294561; }
+    .opacity-block { padding: 8px 12px 12px; border-top: 1px solid #294561; }
+    input[type="range"] { accent-color: var(--cyan); width: 100%; cursor:pointer; }
+    .range-line { display: flex; align-items:center; gap:8px; }
+    .range-line output { min-width: 29px; color:var(--cyan); font-size:9px; text-align:right; }
+    .project-fields { padding: 11px 12px 13px; display: grid; gap: 12px; }
+    .select-line { display:grid; grid-template-columns:1fr 67px; gap:8px; align-items:center; }
+    select, .fps-input { width:100%; min-height:30px; padding:0 7px; border:1px solid #385b7c; background:#0d1c34; color:#dbeafa; font-size:10px; }
+    .resolution-grid { display:grid; grid-template-columns:1fr 18px 1fr; align-items:end; gap:5px; }
+    .resolution-grid label { display:grid; gap:4px; color:#8499b7; font-size:8px; letter-spacing:.06em; }
+    .resolution-grid input { min-width:0; width:100%; min-height:31px; padding:0 7px; border:1px solid #385b7c; background:#0d1c34; color:var(--cyan); font-size:10px; }
+    .resolution-times { color:#7f96b4; text-align:center; padding-bottom:9px; }
+    .resolution-actions { display:grid; grid-template-columns:1fr 31px; gap:6px; margin-top:8px; }
+    .resolution-actions .button { width:100%; }
+    .resolution-presets { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; }
+    .resolution-preset { padding:4px 5px; border:1px solid #2d5270; background:#10253d; color:#86a6c0; cursor:pointer; font-size:8px; }
+    .resolution-preset:hover { color:var(--cyan); border-color:var(--cyan); }
+    .resolution-note { margin:8px 0 0; color:#7288a7; font-size:8px; line-height:1.5; }
+    .import-zone { padding:10px 12px 12px; }
+    .import-zone .button { width:100%; }
+    .import-options { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:8px 0; }
+    .import-options select { min-width:0; font-size:8px; }
+    .import-zone label { display:flex; justify-content:space-between; gap:7px; align-items:center; color:#92a9c4; font-size:9px; }
+    .import-note { margin:8px 0 0; color:#7085a3; font-size:8px; line-height:1.5; }
+    .zoom-row { display:flex; align-items:center; gap:8px; margin-top:10px; color:#8ca4c0; font-size:9px; }
+    .zoom-row input { flex:1; }
+    .zoom-row b { min-width:32px; color:var(--cyan); font-size:9px; text-align:right; }
+    .mini-stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .mini-stat { border:1px solid #294966; padding:7px; background:#0d1e36; }
+    .mini-stat span { display:block; color:#7990ae; margin-bottom:3px; font-size:8px; text-transform:uppercase; }
+    .mini-stat b { color:var(--cyan); font-size:11px; }
+
+    .timeline-panel { grid-column: 1 / -1; overflow: hidden; }
+    .timeline-body { padding: 11px; }
+    .timeline-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:11px; }
+    .playback { display:flex; align-items:center; gap:7px; }
+    #playBtn { min-width:88px; }
+    .fps-box { display:flex; align-items:center; gap:6px; color:#8fa3be; font-size:9px; }
+    .fps-box input { width:46px; min-height:28px; padding:0 5px; border:1px solid #385b7c; background:#0c1b32; color:var(--cyan); font-size:10px; }
+    .timeline-controls { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+    .frame-strip { display:flex; align-items:stretch; gap:8px; overflow-x:auto; padding-bottom:4px; min-height:108px; }
+    .frame-card { position:relative; flex:0 0 99px; min-height:100px; padding:6px; border:1px solid #345676; background:#0c1b31; color:#9fb3cd; cursor:pointer; text-align:left; }
+    .frame-card:hover { background:#14304d; }
+    .frame-card.active { border-color:var(--cyan); box-shadow:inset 0 0 0 1px rgba(123,233,235,.35), 3px 3px 0 #06101e; color:var(--text); }
+    .frame-card.playing::before { content:""; position:absolute; top:4px; right:4px; width:5px; height:5px; background:var(--yellow); box-shadow:0 0 8px var(--yellow); }
+    .frame-thumb-canvas { width: 54px; height:54px; display:block; margin:0 auto 5px; border:1px solid #3d6482; image-rendering:pixelated; }
+    .frame-label { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:9px; }
+    .frame-time { display:block; margin-top:3px; color:#6f86a4; font-size:8px; }
+    .add-frame-card { flex:0 0 62px; display:grid; place-items:center; border:1px dashed #47698a; background:rgba(19,48,74,.35); color:#91b6d0; cursor:pointer; font-size:25px; }
+    .add-frame-card:hover { color:var(--cyan); background:#153652; border-color:var(--cyan); }
+
+    .toast {
+      position: fixed; z-index: 100; right: 24px; bottom: 22px; max-width:min(400px, calc(100vw - 48px));
+      transform: translateY(120px); opacity:0; pointer-events:none;
+      border:1px solid #5c9abd; padding:10px 13px; background:#102b42; color:#e2f7ff;
+      box-shadow:4px 4px 0 #040914; font-size:10px; line-height:1.45; transition:.25s ease;
+    }
+    .toast.show { transform:translateY(0); opacity:1; }
+    .toast b { color:var(--cyan); }
+    .toast.warn { border-color:var(--yellow); background:#3b2e16; }
+    .toast.error { border-color:var(--pink); background:#3b1b2a; }
+
+    /* Gallery */
+    .gallery-hero, .agents-hero, .guide-hero {
+      border:1px solid #315676;
+      min-height:145px;
+      padding:22px; position:relative; overflow:hidden;
+      background:linear-gradient(105deg,#122845, #0d1b33 65%, #152144);
+      box-shadow:4px 4px 0 rgba(4,9,20,.7);
+    }
+    .gallery-hero::after, .agents-hero::after, .guide-hero::after { content:""; position:absolute; inset:0; pointer-events:none; opacity:.7; background-image:linear-gradient(90deg, transparent 0 82%, rgba(123,233,235,.18) 82% 86%, transparent 86%),linear-gradient(transparent 0 69%, rgba(123,233,235,.18) 69% 73%, transparent 73%); background-size:28px 28px; mask-image:linear-gradient(90deg, transparent 16%, #000 55%, #000); }
+    .gallery-hero > *, .agents-hero > *, .guide-hero > * { position:relative; z-index:1; }
+    .gallery-hero h1, .agents-hero h1, .guide-hero h1 { margin: 5px 0 7px; font-size:clamp(22px,3vw,34px); letter-spacing:.04em; }
+    .gallery-hero p, .agents-hero p, .guide-hero p { max-width: 630px; margin:0; color:#9eb0cb; line-height:1.7; font-size:11px; }
+    .gallery-toolbar { display:flex; align-items:center; justify-content:space-between; gap:14px; margin:20px 0 13px; }
+    .gallery-filters { display:flex; flex-wrap:wrap; gap:7px; }
+    .filter { border:1px solid #355875; background:#0f2039; padding:7px 9px; color:#97acc6; cursor:pointer; font-size:9px; }
+    .filter.active, .filter:hover { color:var(--cyan); border-color:var(--cyan); background:#173651; }
+    .gallery-count { color:#8094b1; font-size:9px; }
+    .gallery-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:14px; }
+    .art-card { overflow:hidden; border:1px solid #2c4b69; background:#102039; box-shadow:3px 3px 0 #050b16; }
+    .art-preview { position:relative; padding:15px; display:grid; place-items:center; min-height:205px; background:#0a172c; }
+    .art-preview::before { content:""; position:absolute; inset:0; background-image:linear-gradient(45deg,#0f2039 25%,transparent 25%),linear-gradient(-45deg,#0f2039 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#0f2039 75%),linear-gradient(-45deg,transparent 75%,#0f2039 75%); background-size:14px 14px; background-position:0 0,0 7px,7px -7px,-7px 0; opacity:.4; }
+    .art-preview canvas { position:relative; z-index:1; width:min(100%,154px); aspect-ratio:1; image-rendering:pixelated; border:2px solid #4a7190; box-shadow:5px 5px 0 #050a13; }
+    .art-card-body { padding:12px; }
+    .art-card-head { display:flex; align-items:start; justify-content:space-between; gap:8px; }
+    .art-card h3 { margin:0; font-size:13px; }
+    .art-card p { margin:7px 0 11px; color:#8197b5; font-size:9px; line-height:1.55; }
+    .chip { display:inline-block; border:1px solid #3d6686; background:#132e49; color:#99c7df; padding:3px 5px; font-size:8px; white-space:nowrap; }
+    .art-card-actions { display:flex; justify-content:space-between; align-items:center; gap:6px; }
+    .byline { color:#69809f; font-size:8px; }
+
+    /* Agents */
+    .api-bridge { margin:16px 0; border:1px solid #58a8bd; background:linear-gradient(120deg,#102f47,#0b1c34 67%); box-shadow:5px 5px 0 #050b15; }
+    .api-bridge-head { min-height:61px; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:11px 14px; border-bottom:1px solid #3a6988; }
+    .api-bridge-head h2 { margin:3px 0 0; color:#e8f8ff; font-size:14px; letter-spacing:.025em; }
+    .api-status { display:inline-flex; align-items:center; gap:7px; flex:0 0 auto; padding:6px 7px; border:1px solid #597996; background:#0b1c32; color:#9bb1ca; font-size:8px; letter-spacing:.06em; white-space:nowrap; }
+    .api-status i { width:7px; height:7px; background:#7488a0; box-shadow:0 0 0 3px rgba(116,136,160,.12); }
+    .api-status.live { color:var(--green); border-color:#4a9b6a; } .api-status.live i { background:var(--green); box-shadow:0 0 0 3px rgba(122,213,142,.13),0 0 12px rgba(122,213,142,.7); }
+    .api-status.watch { color:var(--yellow); border-color:#8b7b42; } .api-status.watch i { background:var(--yellow); box-shadow:0 0 0 3px rgba(255,213,93,.12),0 0 12px rgba(255,213,93,.6); }
+    .api-bridge-grid { display:grid; grid-template-columns:1.3fr .9fr; }
+    .api-publish-block, .api-contract-block { padding:14px; }
+    .api-contract-block { border-left:1px solid #355f7c; background:rgba(7,19,36,.23); }
+    .api-bridge strong { display:block; color:var(--cyan); font-size:9px; letter-spacing:.1em; }
+    .api-bridge p { margin:7px 0 11px; color:#9db3ca; font-size:9px; line-height:1.55; }
+    .api-bridge code { color:var(--yellow); font:inherit; }
+    .api-button-row { display:flex; flex-wrap:wrap; gap:6px; }
+    .api-button-row .button { min-height:28px; }
+    .remote-connect-row { display:grid; grid-template-columns:1fr 1.28fr auto; align-items:end; gap:6px; margin-top:11px; }
+    .remote-connect-row label, .api-invite-row label { display:grid; gap:4px; color:#8299b5; font-size:8px; letter-spacing:.04em; }
+    .remote-connect-row input, .api-invite-row input, .api-invite-row select { width:100%; min-width:0; min-height:29px; padding:0 7px; border:1px solid #3c6381; background:#091a2e; color:#d4ecfc; font-size:9px; }
+    .api-watch-row { margin-top:9px; padding-top:9px; border-top:1px dashed #335c78; display:flex; justify-content:space-between; align-items:center; gap:10px; color:#7290ab; font-size:8px; }
+    .agent-curl { min-height:95px; margin:0 0 10px; padding:9px; overflow:auto; border:1px solid #315878; background:#07172a; color:#83e8e8; font:8px/1.65 "SFMono-Regular",Consolas,monospace; white-space:pre-wrap; }
+    .api-invite-row { display:grid; grid-template-columns:1.45fr .72fr .72fr .65fr auto; align-items:end; gap:8px; padding:12px 14px; border-top:1px solid #3a6684; background:rgba(15,42,62,.58); }
+    .api-invite-row > div:first-child span { display:block; max-width:440px; margin-top:4px; color:#819bb7; font-size:8px; line-height:1.45; }
+    .issued-key { grid-column:1 / -1; min-height:29px; padding:7px; border:1px dashed #416d89; color:#86a7c1; background:#08192d; font-size:9px; overflow-wrap:anywhere; }
+    .issued-key.ready { color:var(--yellow); border-style:solid; border-color:#8e7d3f; }
+    .agent-command { margin:16px 0; border:1px solid #3b6d8e; background:linear-gradient(120deg,#102d46,#0d2039 64%); box-shadow:4px 4px 0 #050c17; }
+    .agent-command-head { min-height:39px; padding:0 13px; border-bottom:1px solid #355f80; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .agent-command-head h2 { margin:0; color:var(--cyan); font-size:10px; letter-spacing:.13em; }
+    .agent-command-head span { color:#87a6c1; font-size:8px; }
+    .command-grid { display:grid; grid-template-columns:1.4fr .75fr .8fr; gap:13px; padding:13px; }
+    .brief-label { display:grid; gap:6px; color:#9bb0ca; font-size:9px; letter-spacing:.06em; }
+    .brief-label textarea { width:100%; min-height:74px; resize:vertical; padding:8px; border:1px solid #426a88; background:#091a30; color:#d9efff; font:inherit; font-size:10px; line-height:1.55; }
+    .command-selects { display:grid; align-content:start; gap:8px; }
+    .command-selects label { display:grid; gap:4px; color:#91a9c4; font-size:8px; }
+    .command-selects .button { width:100%; }
+    .command-protocol { padding-left:13px; border-left:1px solid #315775; display:grid; align-content:center; gap:7px; }
+    .protocol-label { color:#7896b4; font-size:8px; letter-spacing:.09em; }
+    .protocol-code { color:#75dde1; font-size:9px; line-height:1.65; }
+    .agent-queue { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:7px; padding:0 13px 13px; }
+    .queue-item { min-height:53px; padding:7px; border:1px solid #315c7c; background:#0b1c32; display:grid; grid-template-columns:1fr auto; gap:7px; align-items:center; }
+    .queue-item strong { display:block; color:#dbeeff; font-size:9px; margin-bottom:3px; }
+    .queue-item span { display:block; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; color:#7890ad; font-size:8px; }
+    .queue-item .button { min-height:25px; }
+    .queue-empty { grid-column:1/-1; border:1px dashed #376482; padding:9px; color:#7793ad; text-align:center; font-size:9px; }
+    .agents-summary { display:grid; grid-template-columns:1.45fr 1fr; gap:16px; margin:16px 0; }
+    .session-map { min-height:204px; overflow:hidden; position:relative; border:1px solid #305372; background:#0c1c34; padding:15px; }
+    .session-map::before { content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(84,140,180,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(84,140,180,.1) 1px, transparent 1px); background-size:18px 18px; }
+    .session-map > * { position:relative; z-index:1; }
+    .session-map h3, .agent-console h3 { margin:0; color:#ddecfc; font-size:10px; letter-spacing:.1em; }
+    .map-canvas { margin:15px auto 0; position:relative; width:min(100%,430px); height:110px; }
+    .map-line { position:absolute; left:10%; right:12%; top:51%; height:2px; background:#32647f; }
+    .map-line::after { content:""; position:absolute; left:22%; top:-1px; width:54%; height:4px; background:var(--cyan); box-shadow:0 0 13px rgba(123,233,235,.5); }
+    .map-node { position:absolute; display:grid; place-items:center; width:42px; height:42px; border:1px solid #4e89a9; background:#123551; color:var(--cyan); box-shadow:3px 3px 0 #071324; font-size:9px; }
+    .map-node::before { content:""; position:absolute; width:7px; height:7px; background:currentColor; top:-4px; right:-4px; }
+    .map-node.n1 { left:7%; top:33px; } .map-node.n2 { left:39%; top:6px; color:var(--yellow); } .map-node.n3 { right:7%; top:39px; color:var(--pink); }
+    .map-note { margin:8px 0 0; color:#8399b6; font-size:9px; line-height:1.55; }
+    .agent-console { min-height:204px; border:1px solid #315573; background:#10233d; padding:15px; }
+    .console-log { height:104px; margin:13px 0; overflow:auto; border-left:2px solid #366c89; padding-left:9px; color:#94aac4; font-size:9px; line-height:1.85; }
+    .console-log b { color:var(--cyan); font-weight:normal; }
+    .agents-grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:15px; }
+    .agent-card { border:1px solid #2e506f; background:#10223b; padding:13px; box-shadow:3px 3px 0 #060d19; }
+    .agent-head { display:flex; gap:10px; align-items:center; }
+    .agent-avatar { width:50px; height:50px; border:1px solid #6090aa; background:#0c1930; image-rendering:pixelated; flex:0 0 50px; }
+    .agent-card h3 { margin:0; font-size:13px; }
+    .agent-role { margin:4px 0 0; color:#7ae0dd; font-size:8px; letter-spacing:.06em; text-transform:uppercase; }
+    .agent-card p { min-height:40px; margin:12px 0; color:#8ca2bd; font-size:9px; line-height:1.55; }
+    .agent-stat { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:11px; }
+    .agent-stat span { padding:5px; border:1px solid #284764; background:#0b1b32; color:#7190ab; font-size:8px; }
+    .agent-stat b { display:block; margin-top:3px; color:#cfedfb; font-size:9px; }
+    .agent-card .button { width:100%; }
+    .honesty-note { margin-top:16px; border-left:3px solid var(--yellow); padding:10px 12px; color:#b5c6db; background:#1b2636; font-size:10px; line-height:1.65; }
+    .honesty-note b { color:var(--yellow); }
+
+    /* Guide */
+    .guide-grid { display:grid; grid-template-columns:1.3fr .9fr; gap:16px; margin-top:16px; }
+    .guide-steps, .guide-shortcuts { border:1px solid #2e516f; background:#10223b; }
+    .guide-step { display:grid; grid-template-columns:42px 1fr; gap:11px; padding:14px; border-bottom:1px solid #294762; }
+    .guide-step:last-child { border-bottom:0; }
+    .step-num { display:grid; place-items:center; width:30px; height:30px; border:1px solid #4c82a2; color:var(--cyan); background:#143550; font-size:12px; }
+    .guide-step h3 { margin:1px 0 5px; color:#e1f0ff; font-size:12px; }
+    .guide-step p { margin:0; color:#91a7c2; font-size:10px; line-height:1.6; }
+    .guide-shortcuts { padding:15px; }
+    .guide-shortcuts h3 { margin:0 0 13px; font-size:11px; letter-spacing:.1em; }
+    .shortcut { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid #294762; color:#9db2ca; font-size:10px; }
+    .shortcut:last-of-type { border-bottom:0; }
+    kbd { padding:2px 5px; border:1px solid #527390; color:var(--cyan); background:#0a1930; font-size:9px; box-shadow:1px 1px 0 #040a13; }
+    .manifesto { margin-top:14px; padding:12px; border:1px solid #37617e; color:#b7cae1; background:#112c43; font-size:10px; line-height:1.65; }
+    .manifesto strong { color:var(--cyan); }
+
+    .empty-state { padding:20px; color:#8499b7; font-size:10px; text-align:center; }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+    @media (max-width: 1260px) {
+      .studio-layout { grid-template-columns: 220px minmax(360px, 1fr); }
+      .api-bridge-grid { grid-template-columns:1fr; }
+      .api-contract-block { border-left:0; border-top:1px solid #355f7c; }
+      .api-invite-row { grid-template-columns:1fr 1fr 1fr; }
+      .api-invite-row > div:first-child { grid-column:1 / -1; }
+      .command-grid { grid-template-columns:1fr 1fr; }
+      .command-protocol { grid-column:1 / -1; padding:10px 0 0; border-left:0; border-top:1px solid #315775; grid-template-columns:1fr auto auto; align-items:center; }
+      .agent-queue { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .right-stack { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+      .timeline-panel { grid-column:1 / -1; }
+      .canvas-stage { min-height:510px; }
+      .gallery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 920px) {
+      .app-shell { padding-left: 0; padding-bottom: 66px; }
+      .sidebar { inset:auto 0 0 0; width:auto; height:66px; padding:6px 8px; flex-direction:row; border-top:1px solid #203854; border-right:0; }
+      .brand-glyph, .brand-word, .side-bottom { display:none; }
+      .main-nav { grid-template-columns:repeat(5,1fr); gap:4px; }
+      .nav-button { min-height:51px; }
+      .topbar { padding:12px 16px; }
+      main { padding:19px 16px 25px; }
+      .studio-layout { grid-template-columns:1fr; }
+      .tools-panel { order:2; }
+      .workbench { order:1; }
+      .right-stack { order:3; grid-column:auto; }
+      .timeline-panel { order:4; grid-column:auto; }
+      .canvas-stage { min-height: auto; }
+      .tools-panel .panel-body { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
+      .tools-panel .rule { display:none; }
+      .agents-summary, .guide-grid { grid-template-columns:1fr; }
+      .api-bridge-head { align-items:flex-start; flex-direction:column; }
+      .remote-connect-row { grid-template-columns:1fr; }
+      .api-invite-row { grid-template-columns:1fr 1fr; }
+      .api-invite-row > div:first-child { grid-column:1 / -1; }
+      .command-grid { grid-template-columns:1fr; }
+      .command-protocol { grid-column:auto; padding:10px 0 0; border-left:0; border-top:1px solid #315775; grid-template-columns:1fr auto; }
+      .agent-queue { grid-template-columns:1fr; }
+      .agents-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 620px) {
+      .topbar { position:relative; align-items:flex-start; flex-direction:column; }
+      .top-actions { justify-content:flex-start; }
+      #projectName { max-width:190px; }
+      .intro-line { align-items:flex-start; flex-direction:column; }
+      .pixel-tag { align-self:flex-start; }
+      .tools-panel .panel-body { grid-template-columns:1fr; }
+      .right-stack { grid-template-columns:1fr; }
+      .canvas-status { display:none; }
+      .canvas-stage { padding:16px; }
+      .gallery-grid, .agents-grid { grid-template-columns:1fr; }
+      .api-invite-row { grid-template-columns:1fr; }
+      .api-invite-row > div:first-child { grid-column:auto; }
+      .api-button-row .button { flex:1 1 auto; }
+      .gallery-toolbar { align-items:flex-start; flex-direction:column; }
+      .art-preview { min-height:176px; }
+      .frame-card { flex-basis:87px; }
+      .timeline-top { align-items:flex-start; flex-direction:column; }
+      .timeline-controls { justify-content:flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="pixel-corner one"></div>
+  <div class="pixel-corner two"></div>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Навигация PIXELPORT">
+      <div class="brand-glyph" aria-label="PIXELPORT">
+        <b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b><b></b>
+      </div>
+      <div class="brand-word">PIXEL<br>PORT</div>
+      <nav class="main-nav">
+        <button class="nav-button active" data-view="agents" title="Агентный центр">
+          <i class="nav-icon agents"></i><span class="nav-label">АГЕНТЫ</span>
+        </button>
+        <button class="nav-button" data-view="studio" title="Студия">
+          <i class="nav-icon studio"></i><span class="nav-label">ХОЛСТ</span>
+        </button>
+        <button class="nav-button" data-view="frames" title="Кадры">
+          <i class="nav-icon frames"></i><span class="nav-label">КАДРЫ</span>
+        </button>
+        <button class="nav-button" data-view="gallery" title="Галерея">
+          <i class="nav-icon gallery"></i><span class="nav-label">ГАЛЕРЕЯ</span>
+        </button>
+        <button class="nav-button" data-view="guide" title="Гайд">
+          <i class="nav-icon guide"></i><span class="nav-label">ГАЙД</span>
+        </button>
+      </nav>
+      <div class="side-bottom" aria-label="Состояние локального проекта">
+        <span class="local-dot"></span>
+        <span class="side-version">LOCAL 1.0</span>
+      </div>
+    </aside>
+
+    <header class="topbar">
+      <div class="project-heading">
+        <span class="project-mark" aria-hidden="true"></span>
+        <div class="project-title-wrap">
+          <div class="eyebrow">совместная пиксельная сессия</div>
+          <div class="project-name-row">
+            <label class="sr-only" for="projectName">Название проекта</label>
+            <input id="projectName" value="Метеорный сад" maxlength="48" autocomplete="off" />
+            <span class="saved-state" id="savedState">● сохранено</span>
+          </div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <input class="sr-only" id="importProject" type="file" accept="application/json,.pixelport,.json" />
+        <input class="sr-only" id="imageImportInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" />
+        <button class="button ghost" id="deviceImageBtn">▣ с устройства</button>
+        <button class="button ghost" id="importBtn">↑ проект</button>
+        <button class="button ghost" id="saveBtn">сохранить</button>
+        <div class="export-wrap" id="exportWrap">
+          <button class="button primary" id="exportBtn">↓ выгрузить</button>
+          <div class="export-menu" id="exportMenu" aria-label="Варианты выгрузки">
+            <button data-export="png">PNG — текущий кадр<small>прозрачный фон, масштаб до ×16</small></button>
+            <button data-export="gif">GIF — анимация<small>все кадры, зацикленный</small></button>
+            <button data-export="sheet">Sprite sheet<small>все кадры в одной PNG</small></button>
+            <button data-export="project">Проект .pixelport<small>для продолжения работы</small></button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="studioView" class="view" data-view-pane="studio">
+        <div class="intro-line">
+          <div>
+            <div class="eyebrow">PIXELPORT / агентный холст</div>
+            <h1>Агенты получают задачу. Ты видишь каждый пиксель.</h1>
+            <p>Рабочее поле для пиксельных команд: произвольное разрешение, слои, загрузка с устройства, покадровая лента и честный экспорт. Все декоративные арты в интерфейсе собраны вручную из пикселей — без генеративных картинок.</p>
+          </div>
+          <span class="pixel-tag"><b>●</b> РЕЖИМ: РУЧНАЯ СЕТКА</span>
+        </div>
+
+        <div class="studio-layout">
+          <section class="panel tools-panel" aria-label="Инструменты рисования">
+            <div class="panel-head"><h3>Инструменты</h3><span class="sub">B · E · F · I</span></div>
+            <div class="panel-body">
+              <div>
+                <div class="tool-grid" id="toolGrid">
+                  <button class="tool-button active" data-tool="brush"><i class="tool-symbol sym-brush"></i><span>Кисть <small>[B]</small></span></button>
+                  <button class="tool-button" data-tool="eraser"><i class="tool-symbol sym-eraser"></i><span>Ластик <small>[E]</small></span></button>
+                  <button class="tool-button" data-tool="fill"><i class="tool-symbol sym-fill"></i><span>Заливка <small>[F]</small></span></button>
+                  <button class="tool-button" data-tool="picker"><i class="tool-symbol sym-picker"></i><span>Пипетка <small>[I]</small></span></button>
+                </div>
+                <div class="rule"></div>
+                <div class="control-label"><span>Размер кисти</span><span class="value-chip" id="brushSizeLabel">1 PX</span></div>
+                <div class="segmented" id="brushSizeControls">
+                  <button class="seg-button active" data-size="1">1</button>
+                  <button class="seg-button" data-size="2">2</button>
+                  <button class="seg-button" data-size="3">3</button>
+                </div>
+                <div class="rule"></div>
+                <label class="toggle-row">Зеркальная кисть <input class="pixel-switch" id="symmetryToggle" type="checkbox" /></label>
+                <label class="toggle-row">Сетка <input class="pixel-switch" id="gridToggle" type="checkbox" checked /></label>
+                <label class="toggle-row">Калька прошлого кадра <input class="pixel-switch" id="onionToggle" type="checkbox" checked /></label>
+              </div>
+              <div>
+                <div class="control-label"><span>Передний цвет</span><span class="value-chip">PICK</span></div>
+                <div class="color-readout">
+                  <div class="active-color" id="activeColor"></div>
+                  <div><div class="color-hex" id="colorHex">#FFD55D</div><div class="color-hint">выбран для кисти</div></div>
+                </div>
+                <div class="color-picker-line">
+                  <input id="customColor" type="color" value="#ffd55d" aria-label="Выбрать свой цвет" />
+                  <button class="button tiny" id="addColorBtn">+ в палитру</button>
+                </div>
+                <div class="rule"></div>
+                <div class="palette" id="palette" aria-label="Палитра"></div>
+                <p class="palette-note">Палитра хранится внутри проекта. Пипетка возьмёт цвет прямо с рисунка.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="workbench">
+            <div class="panel canvas-panel">
+              <div class="panel-head">
+                <div><h3 id="canvasTitle">Холст · 32 × 32</h3></div>
+                <div class="canvas-head-tools">
+                  <span class="zoom-display" id="pixelReadout">x: — / y: —</span>
+                  <button class="icon-button" id="undoBtn" title="Отменить (Ctrl/Cmd + Z)">↶</button>
+                  <button class="icon-button" id="redoBtn" title="Повторить (Ctrl/Cmd + Y)">↷</button>
+                </div>
+              </div>
+              <div class="canvas-stage">
+                <canvas id="editorCanvas" width="640" height="640" aria-label="Пиксельный холст. Рисуйте указателем."></canvas>
+                <div class="canvas-status"><strong id="toolStatus">КИСТЬ · 1 PX</strong><br><span id="layerStatus">слой: Контур + цвет</span></div>
+                <div class="canvas-watermark">PIXELPORT<br>MANUAL ART MODE</div>
+              </div>
+              <div class="canvas-footer">
+                <span class="hotkeys"><b>B</b> кисть&nbsp;&nbsp; <b>E</b> ластик&nbsp;&nbsp; <b>F</b> заливка&nbsp;&nbsp; <b>SPACE</b> просмотр</span>
+                <span class="frame-counter" id="frameCounter">КАДР 01 / 04</span>
+              </div>
+            </div>
+          </section>
+
+          <aside class="right-stack" aria-label="Слои и свойства проекта">
+            <section class="panel">
+              <div class="panel-head"><h3>Слои</h3><span class="sub" id="layersCount">3 слоя</span></div>
+              <div class="layer-list" id="layerList"></div>
+              <div class="panel-action-row"><button class="button tiny" id="addLayerBtn">+ слой</button><button class="button tiny ghost" id="deleteLayerBtn">− удалить</button><button class="button tiny ghost" id="clearLayerBtn">× очистить</button><button class="button tiny ghost" id="flipLayerBtn">↔ отзеркалить</button></div>
+              <div class="opacity-block">
+                <div class="control-label"><span>Непрозрачность</span><span id="opacityLabel">100%</span></div>
+                <div class="range-line"><input type="range" id="opacityRange" min="0" max="100" value="100" /><output id="opacityOutput">100</output></div>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><h3>Разрешение</h3><span class="sub" id="resolutionReadout">32 × 32</span></div>
+              <div class="project-fields">
+                <div>
+                  <div class="control-label"><span>Своя сетка</span><span class="value-chip">∞ INPUT</span></div>
+                  <div class="resolution-grid">
+                    <label>ШИРИНА<input id="canvasWidth" type="number" min="1" step="1" value="32" inputmode="numeric" /></label>
+                    <span class="resolution-times">×</span>
+                    <label>ВЫСОТА<input id="canvasHeight" type="number" min="1" step="1" value="32" inputmode="numeric" /></label>
+                  </div>
+                  <div class="resolution-actions"><button class="button tiny" id="resizeBtn">применить</button><button class="icon-button" id="swapResolutionBtn" title="Поменять ширину и высоту">↔</button></div>
+                  <div class="resolution-presets" aria-label="Быстрые размеры"><button class="resolution-preset" data-resolution="32x32">32²</button><button class="resolution-preset" data-resolution="64x64">64²</button><button class="resolution-preset" data-resolution="320x180">320×180</button><button class="resolution-preset" data-resolution="1280x720">1280×720</button></div>
+                  <p class="resolution-note">Вводи любое целое значение. Ограничение задаёт только память и возможности браузера, не список пресетов.</p>
+                  <div class="zoom-row"><span>МАСШТАБ</span><input id="zoomRange" type="range" min="0.25" max="8" step="0.25" value="1" /><b id="zoomLabel">100%</b></div>
+                </div>
+                <div class="mini-stat-grid">
+                  <div class="mini-stat"><span>Кадров</span><b id="framesStat">04</b></div>
+                  <div class="mini-stat"><span>Пикселей</span><b id="pixelsStat">000</b></div>
+                </div>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="panel-head"><h3>Импорт с устройства</h3><span class="sub">PNG · JPG · WEBP</span></div>
+              <div class="import-zone">
+                <button class="button tiny" id="deviceImagePanelBtn">↑ загрузить картинку</button>
+                <div class="import-options">
+                  <select id="imageImportMode" aria-label="Режим импорта"><option value="replace">заменить слой</option><option value="merge">наложить на слой</option></select>
+                  <select id="imagePaletteMode" aria-label="Палитра импорта"><option value="current">палитра проекта</option><option value="16">новая: 16 цветов</option><option value="32">новая: 32 цвета</option></select>
+                </div>
+                <label>Холст = размер файла <input class="pixel-switch" id="imageNativeSize" type="checkbox" /></label>
+                <p class="import-note">Картинка превратится в редактируемые пиксели активного слоя. Можно также вставить изображение из буфера обмена.</p>
+              </div>
+            </section>
+          </aside>
+
+          <section class="panel timeline-panel" id="framesPanel" aria-label="Лента анимации">
+            <div class="panel-head"><h3>Лента кадров</h3><span class="sub">покадровая анимация</span></div>
+            <div class="timeline-body">
+              <div class="timeline-top">
+                <div class="playback">
+                  <button class="button warning" id="playBtn">▶ просмотр</button>
+                  <span class="fps-box">скорость <input id="fpsInput" type="number" min="1" max="24" value="8" /> FPS</span>
+                </div>
+                <div class="timeline-controls">
+                  <button class="button tiny" id="newFrameBtn">+ пустой</button>
+                  <button class="button tiny" id="duplicateFrameBtn">⧉ копия</button>
+                  <button class="button tiny ghost" id="deleteFrameBtn">− кадр</button>
+                </div>
+              </div>
+              <div class="frame-strip" id="frameStrip"></div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section id="framesView" class="view" data-view-pane="frames">
+        <div class="intro-line">
+          <div><div class="eyebrow">PIXELPORT / покадрово</div><h1>Движение в ритме пикселей.</h1><p>Лента ниже — та же живая анимация из студии. Добавляй чистые кадры, копируй позы, смотри в цикле и выгружай готовый GIF или sprite sheet.</p></div>
+          <span class="pixel-tag">АНИМАЦИЯ <b id="framesViewCount">04</b> КАДРА</span>
+        </div>
+        <div class="panel timeline-panel">
+          <div class="panel-head"><h3>Монтажная лента</h3><span class="sub" id="framesTitleSub">8 FPS · loop</span></div>
+          <div class="timeline-body">
+            <div class="timeline-top">
+              <div class="playback"><button class="button warning" id="playBtnSecondary">▶ просмотр</button><span class="fps-box">скорость <input id="fpsInputSecondary" type="number" min="1" max="24" value="8" /> FPS</span></div>
+              <div class="timeline-controls"><button class="button tiny" data-frame-action="new">+ пустой</button><button class="button tiny" data-frame-action="duplicate">⧉ копия</button><button class="button tiny ghost" data-frame-action="delete">− кадр</button><button class="button primary tiny" data-export-direct="gif">↓ GIF</button></div>
+            </div>
+            <div class="frame-strip" id="frameStripSecondary"></div>
+          </div>
+        </div>
+        <div class="guide-grid">
+          <div class="guide-steps">
+            <article class="guide-step"><span class="step-num">01</span><div><h3>Начни с ключевой позы</h3><p>Нарисуй полный силуэт на первом кадре. Кнопка «копия» перенесёт слои в следующий — так проще сдвигать только то, что движется.</p></div></article>
+            <article class="guide-step"><span class="step-num">02</span><div><h3>Включи кальку</h3><p>В студии переключатель «Калька прошлого кадра» покажет прозрачный след предыдущей позы прямо под текущей.</p></div></article>
+            <article class="guide-step"><span class="step-num">03</span><div><h3>Проверь цикл</h3><p>Нажми пробел или «просмотр». GIF выгружается без фона, поэтому его удобно накладывать на сайт, игру или стикерпак.</p></div></article>
+          </div>
+          <aside class="guide-shortcuts"><h3>ПОДСКАЗКА</h3><div class="manifesto"><strong>Один кадр — один ясный жест.</strong><br>Пиксельная анимация не требует сотен рисунков: здесь важны силуэт, пауза и контраст цвета.</div></aside>
+        </div>
+      </section>
+
+      <section id="galleryView" class="view" data-view-pane="gallery">
+        <div class="gallery-hero">
+          <div class="eyebrow">PIXELPORT / архив сессий</div>
+          <h1>Галерея ручных миров.</h1>
+          <p>Наборы стартовых сцен для общей доски. Каждый мини-арт ниже нарисован пиксельными командами в коде — без стоков, нейрогенерации и внешних картинок. Открой любой как точку старта.</p>
+        </div>
+        <div class="gallery-toolbar">
+          <div class="gallery-filters"><button class="filter active" data-filter="all">всё</button><button class="filter" data-filter="scene">сцены</button><button class="filter" data-filter="loop">лупы</button><button class="filter" data-filter="sprite">спрайты</button></div>
+          <span class="gallery-count" id="galleryCount">06 ручных заготовок</span>
+        </div>
+        <div class="gallery-grid" id="galleryGrid"></div>
+      </section>
+
+      <section id="agentsView" class="view active" data-view-pane="agents">
+        <div class="agents-hero">
+          <div class="eyebrow">PIXELPORT / agent-first workspace</div>
+          <h1>Агенты рисуют по ролям.</h1>
+          <p>Сначала задача и протокол, потом пиксели. Назначь агенту небольшой участок: контур, свет или эффекты. Встроенные исполнители показывают механику на вручную заданных ходах, а внешний агент может получить переносимый проект и бриф.</p>
+        </div>
+        <section class="api-bridge" aria-label="Публикация комнаты для внешних агентов">
+          <div class="api-bridge-head"><div><span class="eyebrow">LIVE API / для реальных агентов</span><h2>Опубликуй комнату — агент получит HTTP-инструменты.</h2></div><span class="api-status" id="apiStatus"><i></i> ЛОКАЛЬНЫЙ ЧЕРНОВИК</span></div>
+          <div class="api-bridge-grid">
+            <div class="api-publish-block">
+              <strong>01 · СОЗДАТЬ ИЛИ ПОДКЛЮЧИТЬ КОМНАТУ</strong>
+              <p>Сервер выдаёт публичный id проекта и приватный ключ владельца. Чтение доступно агентам по ссылке, запись — только с ключом.</p>
+              <div class="api-button-row"><button class="button primary" id="createRemoteProjectBtn">опубликовать проект</button><button class="button" id="pushRemoteProjectBtn">↑ отправить изменения</button><button class="button ghost" id="pullRemoteProjectBtn">↓ получить свежую версию</button></div>
+              <div class="remote-connect-row"><label>ID комнаты<input id="remoteProjectId" maxlength="80" placeholder="px_…" autocomplete="off" /></label><label>Ключ агента / владельца<input id="remoteAgentKey" type="password" placeholder="px_agent_…" autocomplete="off" /></label><button class="button tiny" id="connectRemoteBtn">подключить</button></div>
+              <div class="api-watch-row"><span id="remoteMeta">Комната ещё не опубликована.</span><button class="button tiny ghost" id="watchRemoteBtn">◌ следить за ходами</button></div>
+            </div>
+            <div class="api-contract-block">
+              <strong>02 · КОНТРАКТ ДЛЯ АГЕНТА</strong>
+              <p>Агент читает manifest, планирует пиксели, отправляет только явные координаты и проверяет <code>revision</code> перед ходом.</p>
+              <pre id="agentCurlExample" class="agent-curl"># сначала опубликуй комнату
+GET /api/projects/{id}/manifest
+POST /api/projects/{id}/pixels</pre>
+              <div class="api-button-row"><button class="button tiny" id="copyAgentCurlBtn">копировать cURL</button><a class="button tiny ghost" href="AGENTS.md" target="_blank" rel="noopener">полная инструкция</a></div>
+            </div>
+          </div>
+          <div class="api-invite-row">
+            <div><strong>03 · ВЫДАТЬ АГЕНТУ ОГРАНИЧЕННЫЙ КЛЮЧ</strong><span>Ключ можно привязать к отдельным слоям — агент не затронет чужую часть рисунка.</span></div>
+            <label>имя<input id="newApiAgentName" maxlength="48" placeholder="например, contour-bot" /></label>
+            <label>роль<input id="newApiAgentRole" maxlength="48" value="pixel artist" /></label>
+            <label>слои<select id="newApiAgentLayers"><option value="*">все слои</option><option value="active">активный слой</option></select></label>
+            <button class="button tiny" id="mintAgentKeyBtn">выдать ключ</button>
+            <div class="issued-key" id="issuedAgentKey">Ключ агента появится здесь только один раз.</div>
+          </div>
+        </section>
+        <section class="agent-command" aria-label="Пульт задания агентам">
+          <div class="agent-command-head"><h2>АГЕНТНЫЙ ПУЛЬТ</h2><span>LOCAL · EDITABLE · PIXEL-EXACT</span></div>
+          <div class="command-grid">
+            <label class="brief-label">ЗАДАНИЕ ДЛЯ АГЕНТА<textarea id="agentBrief" maxlength="280" placeholder="Например: добавь три тёплых блика справа от силуэта, не трогай контур."></textarea></label>
+            <div class="command-selects">
+              <label>ИСПОЛНИТЕЛЬ<select id="briefAgent"><option value="byte">Байт · контур</option><option value="luma">Люма · свет</option><option value="spark">Искра · FX</option></select></label>
+              <label>ЦЕЛЬ<select id="briefTarget"><option value="active">активный кадр</option><option value="all">все кадры</option></select></label>
+              <button class="button primary tiny" id="queueTaskBtn">+ в очередь</button>
+            </div>
+            <div class="command-protocol">
+              <span class="protocol-label">ПЕРЕДАТЬ ВНЕШНЕМУ АГЕНТУ</span>
+              <span class="protocol-code" id="protocolSummary">32×32 · 3 слоя · 4 кадра</span>
+              <button class="button tiny ghost" id="copyAgentProtocolBtn">копировать протокол</button>
+              <button class="button tiny" id="openCanvasBtn">к холсту →</button>
+            </div>
+          </div>
+          <div class="agent-queue" id="agentQueue"></div>
+        </section>
+        <div class="agents-summary">
+          <section class="session-map">
+            <h3>КАРТА СЕССИИ · ROOM #P-08</h3>
+            <div class="map-canvas"><div class="map-line"></div><span class="map-node n1">КОНТУР</span><span class="map-node n2">СВЕТ</span><span class="map-node n3">FX</span></div>
+            <p class="map-note">Ход проходит через слои. Клик по карточке ниже добавит маленький авторский штрих в активный слой и откроет холст.</p>
+          </section>
+          <section class="agent-console">
+            <h3>ЖУРНАЛ СЕССИИ</h3>
+            <div class="console-log" id="agentLog"><div><b>00:00</b> комната открыта</div><div><b>00:01</b> «Метеорный сад» загружен</div><div><b>00:02</b> выбери роль для следующего хода</div></div>
+            <button class="button tiny ghost" id="clearAgentLog">очистить журнал</button>
+          </section>
+        </div>
+        <div class="agents-grid" id="agentsGrid"></div>
+        <p class="honesty-note"><b>Честный режим:</b> эти «агенты» не вызывают генератор изображений и не подменяют автора. У каждого — ограниченный вручную нарисованный паттерн; после хода все пиксели остаются твоими и полностью доступны для правки.</p>
+      </section>
+
+      <section id="guideView" class="view" data-view-pane="guide">
+        <div class="guide-hero">
+          <div class="eyebrow">PIXELPORT / как начать</div>
+          <h1>Маленькая сетка. Большая сцена.</h1>
+          <p>Это локальная пиксельная студия: проект сохраняется в браузере, а экспорт работает прямо с холста. Не требуется аккаунт, облако или генератор изображений.</p>
+        </div>
+        <div class="guide-grid">
+          <div class="guide-steps">
+            <article class="guide-step"><span class="step-num">01</span><div><h3>Выбери цвет и инструмент</h3><p>Палитра слева хранится в проекте. Кисть, ластик, заливка и пипетка работают на активном слое.</p></div></article>
+            <article class="guide-step"><span class="step-num">02</span><div><h3>Строй слоями</h3><p>Держи контур, свет и эффекты отдельно. Слои можно скрыть, переименовать двойным кликом и настроить по прозрачности.</p></div></article>
+            <article class="guide-step"><span class="step-num">03</span><div><h3>Собери анимацию</h3><p>В ленте добавь кадр или дубликат, отредактируй позу и задай скорость от 1 до 24 FPS.</p></div></article>
+            <article class="guide-step"><span class="step-num">04</span><div><h3>Выгрузи результат</h3><p>Кнопка «выгрузить» умеет PNG, зацикленный GIF, sprite sheet и переносимый файл проекта.</p></div></article>
+          </div>
+          <aside class="guide-shortcuts">
+            <h3>ГОРЯЧИЕ КЛАВИШИ</h3>
+            <div class="shortcut"><span>Кисть</span><kbd>B</kbd></div>
+            <div class="shortcut"><span>Ластик</span><kbd>E</kbd></div>
+            <div class="shortcut"><span>Заливка</span><kbd>F</kbd></div>
+            <div class="shortcut"><span>Пипетка</span><kbd>I</kbd></div>
+            <div class="shortcut"><span>Сетка</span><kbd>G</kbd></div>
+            <div class="shortcut"><span>Просмотр</span><kbd>SPACE</kbd></div>
+            <div class="shortcut"><span>Отменить</span><kbd>CTRL Z</kbd></div>
+            <div class="shortcut"><span>Сохранить</span><kbd>CTRL S</kbd></div>
+            <div class="manifesto"><strong>ART BY HAND.</strong><br>В этом интерфейсе нет загруженных иллюстраций. Логотип, персонажи, заготовки и эффекты — ручные пиксельные паттерны.</div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    const STORAGE_KEY = 'pixelport-project-v1';
+    const REMOTE_STORAGE_KEY = 'pixelport-agent-room-v1';
+    const DEFAULT_PALETTE = [
+      '#081020', '#172a49', '#2c5178', '#4c9fe4', '#7be9eb', '#e8f4ff',
+      '#ffd55d', '#ff9668', '#fc7193', '#a685f7', '#7ad58e', '#63779c'
+    ];
+    const layerDefaults = [
+      { name: 'Контур + цвет', visible: true, opacity: 1 },
+      { name: 'Свет', visible: true, opacity: 1 },
+      { name: 'Эффекты', visible: true, opacity: 1 }
+    ];
+    let uid = 0;
+    const nextId = (prefix) => `${prefix}-${Date.now().toString(36)}-${(++uid).toString(36)}`;
+    const clone = (value) => JSON.parse(JSON.stringify(value));
+    const hexUpper = (hex) => (hex || '#000000').toUpperCase();
+
+    const state = {
+      projectName: 'Метеорный сад',
+      width: 32,
+      height: 32,
+      palette: [...DEFAULT_PALETTE],
+      selectedColor: '#ffd55d',
+      tool: 'brush',
+      brushSize: 1,
+      zoom: 1,
+      symmetry: false,
+      showGrid: true,
+      onion: true,
+      fps: 8,
+      activeFrame: 0,
+      activeLayer: 0,
+      layers: [],
+      frames: [],
+      agentTasks: [],
+      agentBrief: '',
+      isPlaying: false
+    };
+    const remote = {
+      projectId: null,
+      key: null,
+      revision: null,
+      lastEvent: 0,
+      watching: false,
+      pollTimer: null,
+      lastIssuedKey: null
+    };
+    let undoStack = [];
+    let redoStack = [];
+    let drawing = false;
+    let lastPoint = null;
+    let mutationInStroke = false;
+    let playTimer = null;
+    let toastTimer = null;
+
+    const $ = (selector, scope = document) => scope.querySelector(selector);
+    const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
+    const canvas = $('#editorCanvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
+
+    // Remote room state.  The frontend remains useful offline, but publishing through server.py
+    // turns the current project into a real HTTP surface for independent drawing agents.
+    function persistRemoteSession() {
+      try {
+        localStorage.setItem(REMOTE_STORAGE_KEY, JSON.stringify({
+          projectId: remote.projectId, key: remote.key, revision: remote.revision, lastEvent: remote.lastEvent
+        }));
+      } catch (error) { /* A private browser mode may decline storage; the current session still works. */ }
+    }
+    function loadRemoteSession() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(REMOTE_STORAGE_KEY) || 'null');
+        if (!saved || typeof saved !== 'object') return;
+        remote.projectId = typeof saved.projectId === 'string' ? saved.projectId : null;
+        remote.key = typeof saved.key === 'string' ? saved.key : null;
+        remote.revision = Number.isFinite(Number(saved.revision)) ? Number(saved.revision) : null;
+        remote.lastEvent = Math.max(0, Number(saved.lastEvent) || 0);
+      } catch (error) { localStorage.removeItem(REMOTE_STORAGE_KEY); }
+    }
+    async function apiRequest(path, { method = 'GET', body = null, key = remote.key } = {}) {
+      if (!window.fetch) throw new Error('Этот браузер не поддерживает Fetch API.');
+      const headers = { Accept: 'application/json' };
+      if (body !== null) headers['Content-Type'] = 'application/json';
+      if (key) headers['X-Agent-Key'] = key;
+      let response;
+      try {
+        response = await fetch(path, { method, headers, body: body === null ? undefined : JSON.stringify(body) });
+      } catch (error) {
+        throw new Error('API-сервер недоступен. Запусти сайт через server.py, а не простое открытие HTML-файла.');
+      }
+      const contentType = response.headers.get('content-type') || '';
+      const payload = contentType.includes('application/json') ? await response.json() : null;
+      if (!response.ok || !payload?.ok) {
+        const details = payload?.error?.details?.current_revision;
+        const suffix = details ? ` Текущая revision: ${details}.` : '';
+        throw new Error(`${payload?.error?.message || `HTTP ${response.status}`}${suffix}`);
+      }
+      return payload;
+    }
+    function remoteBaseUrl() {
+      return /^https?:/.test(window.location.origin) ? window.location.origin : 'https://your-pixelport-domain.example';
+    }
+    function renderRemoteUI() {
+      const idInput = $('#remoteProjectId');
+      const keyInput = $('#remoteAgentKey');
+      if (idInput && document.activeElement !== idInput) idInput.value = remote.projectId || '';
+      if (keyInput && document.activeElement !== keyInput) keyInput.value = remote.key || '';
+      const status = $('#apiStatus');
+      const meta = $('#remoteMeta');
+      const projectId = remote.projectId || '<PROJECT_ID>';
+      const key = '<AGENT_KEY>';
+      if (status) {
+        status.className = `api-status ${remote.projectId ? (remote.watching ? 'watch' : 'live') : ''}`.trim();
+        status.innerHTML = `<i></i> ${remote.projectId ? (remote.watching ? 'СЛЕЖЕНИЕ ЗА КОМНАТОЙ' : 'КОМНАТА ПОДКЛЮЧЕНА') : 'ЛОКАЛЬНЫЙ ЧЕРНОВИК'}`;
+      }
+      if (meta) meta.textContent = remote.projectId ? `ID ${remote.projectId} · rev ${remote.revision ?? '—'} · ${remote.key ? 'ключ подключён' : 'чтение без ключа'}` : 'Комната ещё не опубликована.';
+      const curl = $('#agentCurlExample');
+      if (curl) curl.textContent = `# 1. прочитать точную сетку и revision\ncurl "${remoteBaseUrl()}/api/projects/${projectId}/manifest"\n\n# 2. поставить явные пиксели\ncurl -X POST "${remoteBaseUrl()}/api/projects/${projectId}/pixels" \\\n  -H "Content-Type: application/json" \\\n  -H "X-Agent-Key: ${key}" \\\n  -d '{"if_revision": ${remote.revision ?? '<REVISION>'}, "operations":[{"frame":0,"layer":0,"x":12,"y":8,"color":"#7be9eb"}],"message":"agent move"}'`;
+      const issued = $('#issuedAgentKey');
+      if (issued && !remote.lastIssuedKey) { issued.classList.remove('ready'); issued.textContent = 'Ключ агента появится здесь только один раз.'; }
+    }
+    async function createRemoteProject() {
+      try {
+        const payload = await apiRequest('/api/projects', { method: 'POST', key: null, body: { project: getProjectData(), public_read: true } });
+        remote.projectId = payload.project.id;
+        remote.key = payload.owner_key;
+        remote.revision = payload.project.revision;
+        remote.lastEvent = payload.event_id || 0;
+        remote.lastIssuedKey = null;
+        persistRemoteSession(); renderRemoteUI();
+        appendAgentLog(`опубликована API-комната ${remote.projectId}`);
+        showToast('Комната опубликована. <b>Сохрани ключ владельца</b> — он виден в поле подключения.');
+      } catch (error) { showToast(`Не удалось опубликовать: ${error.message}`, 'error'); }
+    }
+    async function pushRemoteProject() {
+      if (!remote.projectId) return createRemoteProject();
+      try {
+        const payload = await apiRequest(`/api/projects/${encodeURIComponent(remote.projectId)}`, {
+          method: 'PUT', body: { project: getProjectData(), if_revision: remote.revision }
+        });
+        remote.revision = payload.revision;
+        remote.lastEvent = payload.event_id || remote.lastEvent;
+        persistRemoteSession(); renderRemoteUI();
+        appendAgentLog(`в комнату отправлена revision ${payload.revision}`);
+        showToast(`Изменения отправлены агентам · revision ${payload.revision}.`);
+      } catch (error) { showToast(`Не удалось отправить: ${error.message}`, 'error'); }
+    }
+    async function pullRemoteProject({ quiet = false } = {}) {
+      if (!remote.projectId) return showToast('Сначала введи ID комнаты или опубликуй проект.', 'warn');
+      try {
+        const payload = await apiRequest(`/api/projects/${encodeURIComponent(remote.projectId)}`);
+        stopPlayback();
+        restoreProject(payload.project.data);
+        remote.revision = payload.project.revision;
+        persistRemoteSession(); renderAll(); renderRemoteUI(); saveLocal(true);
+        if (!quiet) { appendAgentLog(`получена revision ${payload.project.revision} из API-комнаты`); showToast(`Получена свежая версия · revision ${payload.project.revision}.`); }
+      } catch (error) { if (!quiet) showToast(`Не удалось получить проект: ${error.message}`, 'error'); else console.warn(error); }
+    }
+    async function connectRemoteProject() {
+      const id = $('#remoteProjectId').value.trim();
+      const key = $('#remoteAgentKey').value.trim();
+      if (!id) return showToast('Введи ID опубликованной комнаты.', 'warn');
+      remote.projectId = id;
+      remote.key = key || null;
+      remote.revision = null;
+      remote.lastEvent = 0;
+      remote.lastIssuedKey = null;
+      persistRemoteSession(); renderRemoteUI();
+      await pullRemoteProject();
+    }
+    async function pollRemoteEvents() {
+      if (!remote.projectId) return;
+      try {
+        const payload = await apiRequest(`/api/projects/${encodeURIComponent(remote.projectId)}/events?after=${encodeURIComponent(remote.lastEvent)}`);
+        if (!payload.events?.length) return;
+        remote.lastEvent = payload.events[payload.events.length - 1].id;
+        const newestRevision = payload.events[payload.events.length - 1].revision;
+        persistRemoteSession();
+        payload.events.slice(-3).forEach(item => appendAgentLog(`API: ${item.actor} · ${item.type}`));
+        if (Number(newestRevision) !== Number(remote.revision)) await pullRemoteProject({ quiet: true });
+        renderRemoteUI();
+      } catch (error) {
+        // Do not interrupt a shared session for a single network blip; the status changes only on user action.
+        console.warn('PIXELPORT watch:', error.message);
+      }
+    }
+    function toggleRemoteWatch() {
+      if (!remote.projectId) return showToast('Подключи API-комнату перед слежением.', 'warn');
+      if (remote.watching) {
+        clearInterval(remote.pollTimer); remote.pollTimer = null; remote.watching = false; renderRemoteUI(); showToast('Слежение за ходами остановлено.'); return;
+      }
+      remote.watching = true;
+      remote.pollTimer = setInterval(pollRemoteEvents, 3500);
+      pollRemoteEvents(); renderRemoteUI(); showToast('Слежение включено: обновления проверяются каждые 3,5 секунды.');
+    }
+    async function mintRemoteAgentKey() {
+      if (!remote.projectId || !remote.key) return showToast('Нужны опубликованная комната и ключ владельца.', 'warn');
+      const name = $('#newApiAgentName').value.trim();
+      const role = $('#newApiAgentRole').value.trim() || 'pixel artist';
+      if (!name) return showToast('Дай агенту имя перед выдачей ключа.', 'warn');
+      const layerValue = $('#newApiAgentLayers').value;
+      const allowed = layerValue === 'active' ? [state.layers[state.activeLayer].id] : '*';
+      try {
+        const payload = await apiRequest(`/api/projects/${encodeURIComponent(remote.projectId)}/agents`, {
+          method: 'POST', body: { name, role, allowed_layers: allowed, if_revision: remote.revision }
+        });
+        remote.revision = payload.revision;
+        remote.lastIssuedKey = payload.agent_key;
+        persistRemoteSession(); renderRemoteUI();
+        const issued = $('#issuedAgentKey');
+        issued.classList.add('ready');
+        issued.textContent = `АГЕНТ «${payload.agent.name}» · ключ: ${payload.agent_key} · ${payload.agent.allowed_layers === '*' ? 'все слои' : 'только активный слой'}`;
+        appendAgentLog(`выдан ограниченный ключ агенту ${payload.agent.name}`);
+        showToast(`Ключ выдан агенту <b>${payload.agent.name}</b>. Скопируй его сейчас.`);
+      } catch (error) { showToast(`Не удалось выдать ключ: ${error.message}`, 'error'); }
+    }
+    function copyAgentCurl() {
+      const content = $('#agentCurlExample').textContent;
+      const done = () => showToast('Пример cURL скопирован для агента.');
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(content).then(done).catch(() => fallbackCopy(content, done));
+      else fallbackCopy(content, done);
+    }
+
+    // Layers are sparse pixel maps: an empty 8000×8000 scene stores no 64-million-cell bitmap.
+    // Coordinates remain exact pixels, so agents can define arbitrary custom width × height canvases.
+    function cellCount(width = state.width, height = state.height) { return width * height; }
+    function makeLayer() { return Object.create(null); }
+    function makeFrame(name) {
+      return { id: nextId('frame'), name: name || `Кадр ${String(state.frames.length + 1).padStart(2, '0')}`, layers: state.layers.map(() => makeLayer()) };
+    }
+    function setCell(frame, layerIndex, x, y, color) {
+      if (!frame || !frame.layers[layerIndex] || x < 0 || y < 0 || x >= state.width || y >= state.height) return false;
+      const index = y * state.width + x;
+      const layer = frame.layers[layerIndex];
+      const current = layer[index] || null;
+      if (current === color) return false;
+      if (color) layer[index] = color;
+      else delete layer[index];
+      return true;
+    }
+    function paintRect(frame, layer, x, y, w, h, color) {
+      for (let py = y; py < y + h; py++) for (let px = x; px < x + w; px++) setCell(frame, layer, px, py, color);
+    }
+    function paintList(frame, layer, points, color) { points.forEach(([x, y]) => setCell(frame, layer, x, y, color)); }
+
+    // A small original hand-authored sprite. Each colored cell below is an intentional pixel, not an image asset.
+    function drawMeteorBot(frame, variant = 0) {
+      const navy = '#172a49', blue = '#2c5178', sky = '#4c9fe4', cyan = '#7be9eb', white = '#e8f4ff';
+      const yellow = '#ffd55d', orange = '#ff9668', pink = '#fc7193', violet = '#a685f7', green = '#7ad58e', ink = '#081020';
+      // background marks / stars on Effects
+      const stars = [
+        [5,5,yellow],[26,4,cyan],[28,10,pink],[4,17,cyan],[27,25,yellow],[8,27,violet],[23,2,orange],[2,10,green],[30,18,sky]
+      ];
+      stars.forEach(([x,y,c]) => setCell(frame, 2, x, y, c));
+      paintList(frame, 2, [[5,4],[5,6],[4,5],[6,5]], variant % 2 === 0 ? yellow : orange);
+      paintList(frame, 2, [[26,3],[26,5],[25,4],[27,4]], variant % 2 === 2 ? pink : cyan);
+      // antenna
+      paintList(frame, 0, [[15,4],[16,4],[15,5],[16,5],[14,6],[15,6],[16,6],[17,6]], navy);
+      paintList(frame, 1, [[15,3 + (variant === 3 ? 1 : 0)],[16,3 + (variant === 3 ? 1 : 0)]], variant === 1 ? pink : violet);
+      // glass dome outline
+      paintList(frame, 0, [[13,7],[14,7],[15,7],[16,7],[17,7],[18,7],[11,8],[12,8],[19,8],[20,8],[10,9],[21,9],[9,10],[22,10],[8,11],[23,11],[8,12],[23,12],[8,13],[23,13]], navy);
+      paintRect(frame, 0, 9, 14, 15, 2, navy);
+      // glass interior
+      paintRect(frame, 0, 13, 8, 6, 1, sky);
+      paintRect(frame, 0, 11, 9, 10, 1, sky);
+      paintRect(frame, 0, 10, 10, 12, 4, blue);
+      paintRect(frame, 0, 10, 13, 12, 1, sky);
+      paintList(frame, 1, [[12,9],[13,9],[11,10],[12,10],[11,11],[11,12]], cyan);
+      paintList(frame, 1, [[19,10],[20,10],[20,11]], '#79c9eb');
+      // face display
+      paintRect(frame, 0, 12, 11, 8, 2, ink);
+      paintList(frame, 1, [[13,11],[17,11]], white);
+      paintList(frame, 1, [[14,12],[15,12],[16,12]], variant === 2 ? pink : cyan);
+      // body outline and fill
+      paintList(frame, 0, [[8,16],[9,16],[22,16],[23,16],[7,17],[24,17],[7,18],[24,18],[7,19],[24,19],[8,20],[23,20],[9,21],[22,21],[10,22],[21,22],[10,23],[21,23]], navy);
+      paintRect(frame, 0, 9, 17, 14, 4, blue);
+      paintRect(frame, 0, 10, 21, 12, 1, sky);
+      paintRect(frame, 0, 11, 22, 10, 1, navy);
+      paintList(frame, 0, [[12,18],[13,18],[18,18],[19,18],[12,19],[19,19]], ink);
+      paintList(frame, 1, [[13,18],[18,18]], yellow);
+      paintList(frame, 1, [[14,19],[15,19],[16,19],[17,19]], variant === 0 ? cyan : green);
+      // left arm / paintbrush
+      paintList(frame, 0, [[6,17],[6,18],[5,18],[5,19],[4,19],[4,20],[3,20],[3,21],[2,21]], navy);
+      paintList(frame, 0, [[6,19],[5,20],[4,21]], sky);
+      paintList(frame, 0, [[2,20],[1,19]], navy);
+      paintList(frame, 1, [[1,18],[1,17]], orange);
+      // right waving arm, changed in the loop
+      const rightArm = variant === 1 ? [[24,17],[25,16],[26,15],[27,14],[27,13],[28,12]] : variant === 2 ? [[24,17],[25,17],[26,18],[27,18],[28,19]] : variant === 3 ? [[24,17],[25,16],[26,16],[27,15],[28,15]] : [[24,17],[25,18],[26,19],[27,20],[28,21]];
+      paintList(frame, 0, rightArm, navy);
+      paintList(frame, 1, rightArm.slice(1, Math.max(2, rightArm.length - 1)), sky);
+      const hand = rightArm[rightArm.length - 1];
+      paintList(frame, 1, [[hand[0],hand[1]],[hand[0] + (variant === 1 ? 0 : 1),hand[1]]], yellow);
+      // feet
+      paintList(frame, 0, [[11,23],[12,23],[11,24],[11,25],[10,26],[11,26],[12,26],[19,23],[20,23],[20,24],[20,25],[19,26],[20,26],[21,26]], navy);
+      paintList(frame, 1, [[11,24],[20,24]], cyan);
+      // a moving paint sparkle
+      const sparkle = [[3,16],[4,15],[5,14],[6,13]][variant];
+      paintList(frame, 2, [[sparkle[0],sparkle[1]],[sparkle[0]+1,sparkle[1]],[sparkle[0],sparkle[1]+1]], variant === 2 ? pink : orange);
+    }
+
+    function seedProject() {
+      state.layers = layerDefaults.map((l, i) => ({ id: nextId('layer'), ...l, name: l.name || `Слой ${i + 1}` }));
+      state.frames = [];
+      for (let i = 0; i < 4; i++) {
+        const frame = makeFrame(`Кадр ${String(i + 1).padStart(2, '0')}`);
+        drawMeteorBot(frame, i);
+        state.frames.push(frame);
+      }
+      state.activeFrame = 0;
+      state.activeLayer = 0;
+    }
+
+    function getProjectData() {
+      return {
+        format: 'pixelport', version: 2,
+        projectName: state.projectName,
+        width: state.width, height: state.height,
+        // Keep `size` for old one-field readers; new projects use width × height.
+        size: state.width === state.height ? state.width : undefined,
+        palette: state.palette,
+        selectedColor: state.selectedColor, brushSize: state.brushSize, zoom: state.zoom, fps: state.fps,
+        activeFrame: state.activeFrame, activeLayer: state.activeLayer,
+        agentTasks: state.agentTasks, agentBrief: state.agentBrief,
+        layers: state.layers, frames: state.frames
+      };
+    }
+    function normalizeDimension(value, label) {
+      const dimension = Math.floor(Number(value));
+      if (!Number.isSafeInteger(dimension) || dimension < 1) throw new Error(`${label}: введи целое число больше нуля.`);
+      if (dimension > 1000000) throw new Error(`${label}: одно измерение больше 1 000 000 px не поместится в браузерный холст.`);
+      return dimension;
+    }
+    function confirmHeavyGrid(width, height, purpose = 'Эта сетка') {
+      const total = width * height;
+      if (!Number.isSafeInteger(total)) throw new Error('Слишком большое произведение ширины и высоты.');
+      // There is deliberately no preset-size ceiling. The confirmation is about browser RAM, not an art rule.
+      if (total > 2000000 && !confirm(`${purpose} — ${width} × ${height} (${total.toLocaleString('ru-RU')} пикселей). Большая сетка может замедлить браузер и экспорт. Продолжить?`)) return false;
+      if (total > 16000000) throw new Error('Эта сетка слишком велика для надёжной работы в одном окне браузера. Разбей сцену на несколько холстов.');
+      return true;
+    }
+    function sparseLayerFrom(raw, expected) {
+      const result = makeLayer();
+      if (Array.isArray(raw)) {
+        raw.forEach((color, index) => { if (index < expected && typeof color === 'string') result[index] = color; });
+      } else if (raw && typeof raw === 'object') {
+        Object.entries(raw).forEach(([key, color]) => {
+          const index = Number(key);
+          if (Number.isInteger(index) && index >= 0 && index < expected && typeof color === 'string') result[index] = color;
+        });
+      }
+      return result;
+    }
+    function restoreProject(data, { resetHistory = true } = {}) {
+      if (!data || !Array.isArray(data.frames) || !Array.isArray(data.layers)) throw new Error('Не найдено слоёв или кадров.');
+      // Version 1 used a square `size`; it imports seamlessly into the new rectangular format.
+      const width = normalizeDimension(data.width ?? data.size, 'Ширина');
+      const height = normalizeDimension(data.height ?? data.size, 'Высота');
+      if (!data.frames.length) throw new Error('В проекте нет кадров.');
+      const expected = width * height;
+      if (expected > 16000000) throw new Error('Проект слишком велик для безопасного импорта в браузере.');
+      const layers = data.layers.slice(0, 32).map((layer, i) => ({
+        id: layer.id || nextId('layer'), name: String(layer.name || `Слой ${i + 1}`).slice(0, 32),
+        visible: layer.visible !== false, opacity: Math.max(0, Math.min(1, Number(layer.opacity ?? 1)))
+      }));
+      const frames = data.frames.slice(0, 96).map((frame, frameIndex) => ({
+        id: frame.id || nextId('frame'), name: String(frame.name || `Кадр ${frameIndex + 1}`).slice(0, 32),
+        layers: layers.map((_, layerIndex) => sparseLayerFrom((frame.layers && frame.layers[layerIndex]) || {}, expected))
+      }));
+      state.projectName = String(data.projectName || 'Новый пиксельный проект').slice(0, 48);
+      state.width = width;
+      state.height = height;
+      state.palette = [...new Set((Array.isArray(data.palette) ? data.palette : DEFAULT_PALETTE).filter(c => /^#[0-9a-fA-F]{6}$/.test(c)).slice(0, 64))];
+      if (!state.palette.length) state.palette = [...DEFAULT_PALETTE];
+      state.selectedColor = /^#[0-9a-fA-F]{6}$/.test(data.selectedColor) ? data.selectedColor.toLowerCase() : state.palette[0];
+      state.brushSize = [1,2,3].includes(Number(data.brushSize)) ? Number(data.brushSize) : 1;
+      state.zoom = Math.max(.25, Math.min(8, Number(data.zoom) || 1));
+      state.fps = Math.max(1, Math.min(24, Number(data.fps) || 8));
+      state.layers = layers;
+      state.frames = frames;
+      const taskSource = Array.isArray(data.agentTasks) ? data.agentTasks : (Array.isArray(data.jobs) ? data.jobs : []);
+      state.agentTasks = taskSource.slice(0, 24).map((task, index) => ({
+        id: String(task.id || nextId('task')), agentId: ['byte','luma','spark'].includes(task.agentId) ? task.agentId : 'byte',
+        target: task.target === 'all' ? 'all' : 'active', text: String(task.text || task.description || '').slice(0, 280), status: ['queued','claimed','done','cancelled'].includes(task.status) ? task.status : 'queued',
+        frame: Math.max(0, Math.min(frames.length - 1, Number(task.frame) || 0)), layer: Math.max(0, Math.min(layers.length - 1, Number(task.layer) || 0)), index
+      }));
+      state.agentBrief = String(data.agentBrief || '').slice(0, 280);
+      state.activeFrame = Math.max(0, Math.min(frames.length - 1, Number(data.activeFrame) || 0));
+      state.activeLayer = Math.max(0, Math.min(layers.length - 1, Number(data.activeLayer) || 0));
+      if (resetHistory) { undoStack = []; redoStack = []; }
+    }
+    function snapshot() { return clone(getProjectData()); }
+    function pushHistory() {
+      undoStack.push(snapshot());
+      if (undoStack.length > 60) undoStack.shift();
+      redoStack = [];
+      refreshHistoryButtons();
+    }
+    function undo() {
+      if (!undoStack.length) return showToast('Нечего отменять.', 'warn');
+      const current = snapshot();
+      const previous = undoStack.pop();
+      redoStack.push(current);
+      restoreProject(previous, { resetHistory: false });
+      renderAll();
+      saveLocal(true);
+      showToast('Ход отменён.');
+    }
+    function redo() {
+      if (!redoStack.length) return showToast('Нечего повторять.', 'warn');
+      const current = snapshot();
+      const next = redoStack.pop();
+      undoStack.push(current);
+      restoreProject(next, { resetHistory: false });
+      renderAll();
+      saveLocal(true);
+      showToast('Ход возвращён.');
+    }
+    function refreshHistoryButtons() {
+      $('#undoBtn').disabled = !undoStack.length;
+      $('#redoBtn').disabled = !redoStack.length;
+    }
+
+    function drawChecker(targetCtx, width, height, cellX, cellY = cellX) {
+      targetCtx.fillStyle = '#0d1a2f';
+      targetCtx.fillRect(0, 0, width, height);
+      // A tiny repeating pattern is much cheaper than looping through an enormous custom grid.
+      const patternCanvas = document.createElement('canvas');
+      const pw = Math.max(2, Math.ceil(cellX * 2));
+      const ph = Math.max(2, Math.ceil(cellY * 2));
+      patternCanvas.width = pw; patternCanvas.height = ph;
+      const pctx = patternCanvas.getContext('2d');
+      pctx.fillStyle = '#14233d';
+      pctx.fillRect(0, 0, Math.ceil(cellX), Math.ceil(cellY));
+      pctx.fillRect(Math.ceil(cellX), Math.ceil(cellY), Math.ceil(cellX), Math.ceil(cellY));
+      const pattern = typeof targetCtx.createPattern === 'function' ? targetCtx.createPattern(patternCanvas, 'repeat') : null;
+      if (pattern) { targetCtx.fillStyle = pattern; targetCtx.fillRect(0, 0, width, height); }
+    }
+    function drawFrameToContext(targetCtx, frame, cellX, cellY = cellX, alpha = 1) {
+      if (!frame) return;
+      state.layers.forEach((layer, layerIndex) => {
+        if (!layer.visible || layer.opacity <= 0 || !frame.layers[layerIndex]) return;
+        targetCtx.globalAlpha = Math.max(0, Math.min(1, layer.opacity * alpha));
+        const pixels = frame.layers[layerIndex];
+        Object.entries(pixels).forEach(([key, color]) => {
+          const index = Number(key);
+          if (!color || !Number.isInteger(index)) return;
+          const x = index % state.width;
+          const y = Math.floor(index / state.width);
+          if (y < state.height) { targetCtx.fillStyle = color; targetCtx.fillRect(x * cellX, y * cellY, cellX, cellY); }
+        });
+      });
+      targetCtx.globalAlpha = 1;
+    }
+    function drawGrid(targetCtx, cellX, cellY, width, height) {
+      if (cellX < 3 || cellY < 3 || state.width > 2048 || state.height > 2048) return;
+      targetCtx.beginPath();
+      targetCtx.strokeStyle = 'rgba(173, 225, 247, .25)';
+      targetCtx.lineWidth = 1;
+      for (let i = 0; i <= state.width; i++) { const point = i * cellX + .5; targetCtx.moveTo(point, 0); targetCtx.lineTo(point, height); }
+      for (let i = 0; i <= state.height; i++) { const point = i * cellY + .5; targetCtx.moveTo(0, point); targetCtx.lineTo(width, point); }
+      targetCtx.stroke();
+    }
+    function editorBaseCell() {
+      const longest = Math.max(state.width, state.height);
+      return Math.min(20, 640 / longest) * state.zoom;
+    }
+    function renderCanvas() {
+      const nominalCell = editorBaseCell();
+      const drawWidth = Math.max(1, Math.min(8192, Math.round(state.width * nominalCell)));
+      const drawHeight = Math.max(1, Math.min(8192, Math.round(state.height * nominalCell)));
+      canvas.width = drawWidth;
+      canvas.height = drawHeight;
+      canvas.style.width = `${drawWidth}px`;
+      canvas.style.height = `${drawHeight}px`;
+      const cellX = drawWidth / state.width, cellY = drawHeight / state.height;
+      ctx.imageSmoothingEnabled = false;
+      drawChecker(ctx, drawWidth, drawHeight, cellX, cellY);
+      if (state.onion && state.activeFrame > 0) drawFrameToContext(ctx, state.frames[state.activeFrame - 1], cellX, cellY, .14);
+      drawFrameToContext(ctx, state.frames[state.activeFrame], cellX, cellY, 1);
+      if (state.showGrid) drawGrid(ctx, cellX, cellY, drawWidth, drawHeight);
+    }
+    function drawThumbnail(target, frame, addChecker = true) {
+      const box = 128;
+      target.width = box; target.height = box;
+      const tctx = target.getContext('2d');
+      tctx.imageSmoothingEnabled = false;
+      tctx.clearRect(0, 0, box, box);
+      const scale = Math.min(box / state.width, box / state.height);
+      const width = state.width * scale, height = state.height * scale;
+      const offsetX = (box - width) / 2, offsetY = (box - height) / 2;
+      tctx.save(); tctx.translate(offsetX, offsetY);
+      if (addChecker) drawChecker(tctx, width, height, scale, scale);
+      drawFrameToContext(tctx, frame, scale, scale, 1);
+      tctx.restore();
+    }
+    function flattenFrame(frame) {
+      const output = new Map();
+      state.layers.forEach((layer, layerIndex) => {
+        if (!layer.visible || layer.opacity <= 0 || !frame.layers[layerIndex]) return;
+        Object.entries(frame.layers[layerIndex]).forEach(([key, color]) => { if (color) output.set(Number(key), color); });
+      });
+      return output;
+    }
+    function countPixels() { return flattenFrame(state.frames[state.activeFrame]).size; }
+
+    function renderPalette() {
+      const palette = $('#palette');
+      palette.innerHTML = state.palette.map(color => `<button class="swatch ${color.toLowerCase() === state.selectedColor.toLowerCase() ? 'selected' : ''}" title="${hexUpper(color)}" aria-label="Выбрать ${hexUpper(color)}" data-color="${color}" style="--swatch:${color}"></button>`).join('');
+      $('#activeColor').style.background = state.selectedColor;
+      $('#colorHex').textContent = hexUpper(state.selectedColor);
+      $('#customColor').value = state.selectedColor;
+    }
+    function renderTools() {
+      $$('#toolGrid .tool-button').forEach(button => button.classList.toggle('active', button.dataset.tool === state.tool));
+      $$('#brushSizeControls .seg-button').forEach(button => button.classList.toggle('active', Number(button.dataset.size) === state.brushSize));
+      $('#brushSizeLabel').textContent = `${state.brushSize} PX`;
+      $('#symmetryToggle').checked = state.symmetry;
+      $('#gridToggle').checked = state.showGrid;
+      $('#onionToggle').checked = state.onion;
+      const names = { brush: 'КИСТЬ', eraser: 'ЛАСТИК', fill: 'ЗАЛИВКА', picker: 'ПИПЕТКА' };
+      $('#toolStatus').textContent = `${names[state.tool]} · ${state.brushSize} PX`;
+      canvas.style.cursor = state.tool === 'picker' ? 'copy' : state.tool === 'fill' ? 'cell' : 'crosshair';
+    }
+    function renderLayers() {
+      const list = $('#layerList');
+      list.innerHTML = state.layers.slice().reverse().map((layer, reverseIndex) => {
+        const index = state.layers.length - reverseIndex - 1;
+        return `<div class="layer-row ${index === state.activeLayer ? 'active' : ''}" data-layer="${index}" title="Двойной клик — переименовать">
+          <span class="layer-badge">${index + 1}</span><span class="layer-name">${escapeHtml(layer.name)}</span>
+          <button class="visible-toggle ${layer.visible ? '' : 'off'}" data-toggle-layer="${index}" title="${layer.visible ? 'Скрыть' : 'Показать'} слой">${layer.visible ? '◉' : '○'}</button>
+        </div>`;
+      }).join('');
+      const active = state.layers[state.activeLayer];
+      const value = Math.round(active.opacity * 100);
+      $('#opacityRange').value = value;
+      $('#opacityLabel').textContent = `${value}%`;
+      $('#opacityOutput').textContent = value;
+      $('#layersCount').textContent = `${state.layers.length} ${plural(state.layers.length, 'слой', 'слоя', 'слоёв')}`;
+      $('#layerStatus').textContent = `слой: ${active.name}`;
+    }
+    function renderFrames(targetId) {
+      const strip = $(`#${targetId}`);
+      if (!strip) return;
+      strip.innerHTML = state.frames.map((frame, index) => `<button class="frame-card ${index === state.activeFrame ? 'active' : ''} ${state.isPlaying && index === state.activeFrame ? 'playing' : ''}" data-frame="${index}">
+        <canvas class="frame-thumb-canvas" data-thumb="${index}" aria-label="Миниатюра ${escapeHtml(frame.name)}"></canvas><span class="frame-label">${escapeHtml(frame.name)}</span><span class="frame-time">${String(index + 1).padStart(2,'0')} · ${Math.round(1000 / state.fps)}ms</span>
+      </button>`).join('') + `<button class="add-frame-card" data-add-frame title="Добавить пустой кадр">+</button>`;
+      $$('canvas[data-thumb]', strip).forEach(mini => drawThumbnail(mini, state.frames[Number(mini.dataset.thumb)]));
+    }
+    function renderFrameUI() {
+      renderFrames('frameStrip');
+      renderFrames('frameStripSecondary');
+      const frameCount = String(state.frames.length).padStart(2, '0');
+      $('#frameCounter').textContent = `КАДР ${String(state.activeFrame + 1).padStart(2, '0')} / ${frameCount}`;
+      $('#framesStat').textContent = frameCount;
+      $('#framesViewCount').textContent = frameCount;
+      $('#fpsInput').value = state.fps;
+      $('#fpsInputSecondary').value = state.fps;
+      $('#framesTitleSub').textContent = `${state.fps} FPS · loop`;
+      const playText = state.isPlaying ? '■ стоп' : '▶ просмотр';
+      $('#playBtn').textContent = playText;
+      $('#playBtnSecondary').textContent = playText;
+    }
+    function renderStats() {
+      $('#pixelsStat').textContent = String(countPixels()).padStart(3, '0');
+      $('#canvasTitle').textContent = `Холст · ${state.width} × ${state.height}`;
+      $('#canvasWidth').value = String(state.width);
+      $('#canvasHeight').value = String(state.height);
+      $('#resolutionReadout').textContent = `${state.width} × ${state.height}`;
+      $('#zoomLabel').textContent = `${Math.round(state.zoom * 100)}%`;
+      $('#zoomRange').value = String(state.zoom);
+      $('#projectName').value = state.projectName;
+    }
+    function renderAgentQueue() {
+      const queue = $('#agentQueue');
+      if (!queue) return;
+      const waiting = state.agentTasks.filter(task => task.status === 'queued' || task.status === 'claimed');
+      if (!waiting.length) { queue.innerHTML = '<div class="queue-empty">Очередь свободна. Сформулируй короткое пиксельное задание и назначь исполнителя.</div>'; return; }
+      queue.innerHTML = waiting.map(task => {
+        const agent = agents.find(item => item.id === task.agentId) || agents[0];
+        const status = task.status === 'claimed' ? ' · в работе' : '';
+        return `<div class="queue-item"><div><strong>${escapeHtml(agent.name)} · ${task.target === 'all' ? 'все кадры' : 'активный кадр'}${status}</strong><span>${escapeHtml(task.text || 'ручной пиксельный ход')}</span></div><div><button class="button tiny" data-run-task="${escapeHtml(task.id)}">выполнить</button><button class="button tiny ghost" data-remove-task="${escapeHtml(task.id)}" title="Убрать из очереди">×</button></div></div>`;
+      }).join('');
+    }
+    function renderAgentWorkspace() {
+      const brief = $('#agentBrief');
+      if (brief && document.activeElement !== brief) brief.value = state.agentBrief;
+      const protocol = $('#protocolSummary');
+      if (protocol) protocol.textContent = `${state.width}×${state.height} · ${state.layers.length} ${plural(state.layers.length, 'слой', 'слоя', 'слоёв')} · ${state.frames.length} ${plural(state.frames.length, 'кадр', 'кадра', 'кадров')}`;
+      renderAgentQueue();
+    }
+    function renderAll() {
+      renderCanvas(); renderPalette(); renderTools(); renderLayers(); renderFrameUI(); renderStats(); renderAgentWorkspace(); renderRemoteUI(); refreshHistoryButtons();
+    }
+    function escapeHtml(text) { return String(text).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' }[char])); }
+    function plural(n, one, few, many) { const x = Math.abs(n) % 100, y = x % 10; return x > 10 && x < 20 ? many : y > 1 && y < 5 ? few : y === 1 ? one : many; }
+
+    function setColor(color, shouldAdd = false) {
+      if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+      state.selectedColor = color.toLowerCase();
+      if (shouldAdd && !state.palette.some(item => item.toLowerCase() === state.selectedColor)) {
+        if (state.palette.length >= 64) return showToast('В палитре максимум 64 цвета.', 'warn');
+        state.palette.push(state.selectedColor);
+        showToast(`${hexUpper(state.selectedColor)} добавлен в палитру.`);
+      }
+      renderPalette(); renderTools(); saveLocal(true);
+    }
+    function setTool(tool) { state.tool = tool; renderTools(); }
+    function pointFromEvent(event) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(state.width - 1, Math.floor((event.clientX - rect.left) / rect.width * state.width))),
+        y: Math.max(0, Math.min(state.height - 1, Math.floor((event.clientY - rect.top) / rect.height * state.height)))
+      };
+    }
+    function getCompositeColor(x, y) {
+      const i = y * state.width + x;
+      for (let l = state.layers.length - 1; l >= 0; l--) {
+        if (!state.layers[l].visible || state.layers[l].opacity <= 0) continue;
+        const color = state.frames[state.activeFrame].layers[l][i];
+        if (color) return color;
+      }
+      return null;
+    }
+    function writeBrush(x, y, color) {
+      const frame = state.frames[state.activeFrame];
+      const offset = Math.floor(state.brushSize / 2);
+      let changed = false;
+      for (let yy = y - offset; yy < y - offset + state.brushSize; yy++) {
+        for (let xx = x - offset; xx < x - offset + state.brushSize; xx++) {
+          changed = setCell(frame, state.activeLayer, xx, yy, color) || changed;
+          if (state.symmetry) changed = setCell(frame, state.activeLayer, state.width - 1 - xx, yy, color) || changed;
+        }
+      }
+      return changed;
+    }
+    function floodFill(x, y, color) {
+      const frame = state.frames[state.activeFrame];
+      const layer = frame.layers[state.activeLayer];
+      const start = y * state.width + x;
+      const original = layer[start] || null;
+      if (original === color) return false;
+      if (!original && cellCount() > 1000000 && !confirm(`Заливка затронет до ${cellCount().toLocaleString('ru-RU')} пустых пикселей. На большой сетке это может занять время. Продолжить?`)) return false;
+      const queue = [[x, y]];
+      const seen = new Set();
+      let changed = false;
+      while (queue.length) {
+        const [px, py] = queue.pop();
+        if (px < 0 || py < 0 || px >= state.width || py >= state.height) continue;
+        const i = py * state.width + px;
+        if (seen.has(i) || (layer[i] || null) !== original) continue;
+        seen.add(i); layer[i] = color; changed = true;
+        queue.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]);
+      }
+      return changed;
+    }
+    function applyAt(point, dragging = false) {
+      if (state.tool === 'picker') {
+        const color = getCompositeColor(point.x, point.y);
+        if (color) { setColor(color); showToast(`Пипетка: ${hexUpper(color)}`); }
+        else showToast('В этом пикселе прозрачный фон.', 'warn');
+        return false;
+      }
+      if (!mutationInStroke) { pushHistory(); mutationInStroke = true; }
+      let changed = false;
+      if (state.tool === 'fill') changed = floodFill(point.x, point.y, state.selectedColor);
+      else if (state.tool === 'eraser') changed = writeBrush(point.x, point.y, null);
+      else changed = writeBrush(point.x, point.y, state.selectedColor);
+      if (!changed && !dragging && state.tool === 'fill') {
+        undoStack.pop(); refreshHistoryButtons(); mutationInStroke = false;
+      }
+      return changed;
+    }
+    function drawBetween(from, to) {
+      const dx = Math.abs(to.x - from.x), sx = from.x < to.x ? 1 : -1;
+      const dy = -Math.abs(to.y - from.y), sy = from.y < to.y ? 1 : -1;
+      let err = dx + dy, x = from.x, y = from.y;
+      while (true) {
+        applyAt({ x, y }, true);
+        if (x === to.x && y === to.y) break;
+        const e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x += sx; }
+        if (e2 <= dx) { err += dx; y += sy; }
+      }
+    }
+    function finishStroke() {
+      if (drawing && mutationInStroke) { saveLocal(true); renderLayers(); renderStats(); renderFrameUI(); }
+      drawing = false; lastPoint = null; mutationInStroke = false;
+    }
+
+    function addLayer() {
+      pushHistory();
+      const number = state.layers.length + 1;
+      state.layers.push({ id: nextId('layer'), name: `Слой ${number}`, visible: true, opacity: 1 });
+      state.frames.forEach(frame => frame.layers.push(makeLayer()));
+      state.activeLayer = state.layers.length - 1;
+      renderAll(); saveLocal(true); showToast(`Добавлен слой ${number}.`);
+    }
+    function deleteLayer() {
+      if (state.layers.length <= 1) return showToast('Нужен хотя бы один слой.', 'warn');
+      const layer = state.layers[state.activeLayer];
+      if (!confirm(`Удалить слой «${layer.name}» во всех кадрах?`)) return;
+      pushHistory();
+      state.layers.splice(state.activeLayer, 1);
+      state.frames.forEach(frame => frame.layers.splice(state.activeLayer, 1));
+      state.activeLayer = Math.max(0, state.activeLayer - 1);
+      renderAll(); saveLocal(true); showToast('Слой удалён.');
+    }
+    function clearActiveLayer() {
+      const layer = state.layers[state.activeLayer];
+      const pixels = state.frames[state.activeFrame].layers[state.activeLayer];
+      if (!Object.keys(pixels).length) return showToast('Активный слой уже пустой.', 'warn');
+      if (!confirm(`Очистить «${layer.name}» только в текущем кадре?`)) return;
+      pushHistory();
+      state.frames[state.activeFrame].layers[state.activeLayer] = makeLayer();
+      renderAll(); saveLocal(true); showToast(`Слой «${layer.name}» очищен в текущем кадре.`);
+    }
+    function flipActiveLayer() {
+      const current = state.frames[state.activeFrame].layers[state.activeLayer];
+      if (!Object.keys(current).length) return showToast('В активном слое пока нет пикселей.', 'warn');
+      pushHistory();
+      const flipped = makeLayer();
+      Object.entries(current).forEach(([key, color]) => {
+        const index = Number(key), x = index % state.width, y = Math.floor(index / state.width);
+        if (y < state.height && color) flipped[y * state.width + (state.width - 1 - x)] = color;
+      });
+      state.frames[state.activeFrame].layers[state.activeLayer] = flipped;
+      renderAll(); saveLocal(true); showToast('Активный слой отражён по горизонтали.');
+    }
+    function addFrame(copyFrame = false) {
+      pushHistory();
+      let frame;
+      if (copyFrame) {
+        frame = clone(state.frames[state.activeFrame]);
+        frame.id = nextId('frame');
+        frame.name = `Кадр ${String(state.frames.length + 1).padStart(2, '0')}`;
+      } else frame = makeFrame(`Кадр ${String(state.frames.length + 1).padStart(2, '0')}`);
+      state.frames.splice(state.activeFrame + 1, 0, frame);
+      state.activeFrame += 1;
+      renderAll(); saveLocal(true); showToast(copyFrame ? 'Кадр скопирован.' : 'Добавлен чистый кадр.');
+    }
+    function deleteFrame() {
+      if (state.frames.length <= 1) return showToast('В анимации должен остаться хотя бы один кадр.', 'warn');
+      if (!confirm(`Удалить «${state.frames[state.activeFrame].name}»?`)) return;
+      pushHistory();
+      state.frames.splice(state.activeFrame, 1);
+      state.activeFrame = Math.max(0, state.activeFrame - 1);
+      renderAll(); saveLocal(true); showToast('Кадр удалён.');
+    }
+    function resizeProjectTo(newWidth, newHeight, { ask = true, history = true, validate = true, reason = 'Сетка' } = {}) {
+      if (newWidth === state.width && newHeight === state.height) return false;
+      if (validate && !confirmHeavyGrid(newWidth, newHeight, reason)) return false;
+      if (ask && !confirm(`Изменить холст с ${state.width}×${state.height} на ${newWidth}×${newHeight}? Пиксели останутся у левого верхнего угла; всё за границей будет обрезано.`)) return false;
+      if (history) pushHistory();
+      const oldWidth = state.width, oldHeight = state.height;
+      state.frames.forEach(frame => {
+        frame.layers = frame.layers.map(oldPixels => {
+          const next = makeLayer();
+          Object.entries(oldPixels).forEach(([key, color]) => {
+            const index = Number(key), x = index % oldWidth, y = Math.floor(index / oldWidth);
+            if (x < newWidth && y < newHeight && color) next[y * newWidth + x] = color;
+          });
+          return next;
+        });
+      });
+      state.width = newWidth; state.height = newHeight;
+      return true;
+    }
+    function resizeProject() {
+      try {
+        const newWidth = normalizeDimension($('#canvasWidth').value, 'Ширина');
+        const newHeight = normalizeDimension($('#canvasHeight').value, 'Высота');
+        if (!resizeProjectTo(newWidth, newHeight)) { renderStats(); return; }
+        renderAll(); saveLocal(true); showToast(`Холст изменён: ${newWidth} × ${newHeight}.`);
+      } catch (error) { showToast(error.message, 'error'); renderStats(); }
+    }
+    function swapResolution() {
+      const width = $('#canvasWidth').value; $('#canvasWidth').value = $('#canvasHeight').value; $('#canvasHeight').value = width;
+      showToast('Ширина и высота поменяны местами. Нажми «применить».');
+    }
+    function useResolutionPreset(width, height) {
+      $('#canvasWidth').value = width; $('#canvasHeight').value = height; resizeProject();
+    }
+
+    function togglePlayback() {
+      if (state.isPlaying) {
+        clearInterval(playTimer); playTimer = null; state.isPlaying = false; renderFrameUI(); showToast('Просмотр остановлен.'); return;
+      }
+      state.isPlaying = true;
+      renderFrameUI();
+      const tick = () => { state.activeFrame = (state.activeFrame + 1) % state.frames.length; renderCanvas(); renderFrameUI(); renderStats(); };
+      playTimer = setInterval(tick, Math.max(45, Math.round(1000 / state.fps)));
+      showToast(`Просмотр: ${state.fps} FPS.`);
+    }
+    function stopPlayback() {
+      if (state.isPlaying) { clearInterval(playTimer); playTimer = null; state.isPlaying = false; renderFrameUI(); }
+    }
+    function setFps(value) {
+      const fps = Math.max(1, Math.min(24, Number(value) || 8));
+      state.fps = fps;
+      if (state.isPlaying) { clearInterval(playTimer); state.isPlaying = false; togglePlayback(); }
+      renderFrameUI(); saveLocal(true);
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    function slugify(value) {
+      return value.trim().toLowerCase().replace(/[^a-zа-яё0-9]+/gi, '-').replace(/^-|-$/g, '') || 'pixelport-art';
+    }
+    function makeCleanCanvas(width, height) { const out = document.createElement('canvas'); out.width = width; out.height = height; return out; }
+    function exportScale(preferred, columns = 1, rows = 1) {
+      const longest = Math.max(state.width * columns, state.height * rows);
+      return Math.max(1, Math.min(preferred, Math.floor(8192 / longest) || 1));
+    }
+    function exportPNG() {
+      stopPlayback();
+      const scale = exportScale(16), outputWidth = state.width * scale, outputHeight = state.height * scale;
+      if (outputWidth * outputHeight > 64000000) return showToast('Этот PNG слишком большой для выгрузки в браузере. Уменьши масштаб или раздели сцену.', 'error');
+      const out = makeCleanCanvas(outputWidth, outputHeight), octx = out.getContext('2d');
+      octx.imageSmoothingEnabled = false; drawFrameToContext(octx, state.frames[state.activeFrame], scale, scale, 1);
+      out.toBlob(blob => { if (blob) { downloadBlob(blob, `${slugify(state.projectName)}-${state.width}x${state.height}-frame-${String(state.activeFrame + 1).padStart(2,'0')}.png`); showToast(`PNG ${outputWidth}×${outputHeight} выгружен с прозрачным фоном.`); } }, 'image/png');
+    }
+    function exportSpriteSheet() {
+      stopPlayback();
+      const cols = Math.min(4, state.frames.length), rows = Math.ceil(state.frames.length / cols);
+      const scale = exportScale(12, cols, rows), outputWidth = cols * state.width * scale, outputHeight = rows * state.height * scale;
+      if (outputWidth * outputHeight > 64000000) return showToast('Этот sprite sheet слишком большой для выгрузки в браузере.', 'error');
+      const out = makeCleanCanvas(outputWidth, outputHeight), octx = out.getContext('2d');
+      octx.imageSmoothingEnabled = false;
+      state.frames.forEach((frame, index) => {
+        octx.save(); octx.translate((index % cols) * state.width * scale, Math.floor(index / cols) * state.height * scale); drawFrameToContext(octx, frame, scale, scale, 1); octx.restore();
+      });
+      out.toBlob(blob => { if (blob) { downloadBlob(blob, `${slugify(state.projectName)}-${state.width}x${state.height}-sprites.png`); showToast(`Sprite sheet ${outputWidth}×${outputHeight} выгружен.`); } }, 'image/png');
+    }
+    function hexToRGB(hex) { const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex); return m ? [parseInt(m[1],16), parseInt(m[2],16), parseInt(m[3],16)] : [0,0,0]; }
+    function word(value) { return [value & 0xff, (value >> 8) & 0xff]; }
+    function textBytes(text) { return Array.from(text).map(char => char.charCodeAt(0)); }
+    function lzwEncode(indices, minimumCodeSize) {
+      const clearCode = 1 << minimumCodeSize;
+      const endCode = clearCode + 1;
+      let codeSize = minimumCodeSize + 1;
+      let nextCode = endCode + 1;
+      let dictionary = new Map();
+      for (let i = 0; i < clearCode; i++) dictionary.set(String(i), i);
+      const output = [];
+      let bitBuffer = 0, bitLength = 0;
+      const writeCode = (code) => {
+        bitBuffer |= code << bitLength;
+        bitLength += codeSize;
+        while (bitLength >= 8) { output.push(bitBuffer & 0xff); bitBuffer >>= 8; bitLength -= 8; }
+      };
+      const reset = () => {
+        dictionary = new Map(); for (let i = 0; i < clearCode; i++) dictionary.set(String(i), i);
+        codeSize = minimumCodeSize + 1; nextCode = endCode + 1;
+      };
+      writeCode(clearCode);
+      if (!indices.length) { writeCode(endCode); return output; }
+      let phrase = String(indices[0]);
+      for (let i = 1; i < indices.length; i++) {
+        const suffix = String(indices[i]);
+        const joined = `${phrase},${suffix}`;
+        if (dictionary.has(joined)) { phrase = joined; continue; }
+        writeCode(dictionary.get(phrase));
+        if (nextCode < 4096) {
+          dictionary.set(joined, nextCode++);
+          // GIF code width changes one emitted code later than the dictionary threshold.
+          // Using > here keeps streams readable by strict GIF decoders.
+          if (nextCode > (1 << codeSize) && codeSize < 12) codeSize++;
+        } else {
+          writeCode(clearCode); reset();
+        }
+        phrase = suffix;
+      }
+      writeCode(dictionary.get(phrase));
+      writeCode(endCode);
+      if (bitLength > 0) output.push(bitBuffer & 0xff);
+      return output;
+    }
+    function bytesAsSubBlocks(bytes) {
+      const data = [];
+      for (let offset = 0; offset < bytes.length; offset += 255) { const part = bytes.slice(offset, offset + 255); data.push(part.length, ...part); }
+      data.push(0); return data;
+    }
+    function exportGIF() {
+      stopPlayback();
+      if (state.width > 65535 || state.height > 65535) return showToast('Формат GIF ограничен 65 535 px по каждой стороне. Используй PNG или .pixelport.', 'error');
+      if (cellCount() > 4000000) return showToast('Для такого большого холста GIF будет слишком тяжёлым. Выгрузи PNG или проект.', 'error');
+      const flattened = state.frames.map(flattenFrame);
+      const colorList = [];
+      const colorIndex = new Map();
+      flattened.forEach(pixels => pixels.forEach(color => {
+        if (color && !colorIndex.has(color.toLowerCase()) && colorList.length < 255) { colorIndex.set(color.toLowerCase(), colorList.length + 1); colorList.push(color); }
+      }));
+      if (flattened.some(pixels => Array.from(pixels.values()).some(color => color && !colorIndex.has(color.toLowerCase())))) return showToast('GIF поддерживает до 255 цветов. Сократи палитру.', 'error');
+      let tableSize = 2;
+      while (tableSize < colorList.length + 1) tableSize <<= 1;
+      const minimumCodeSize = Math.max(2, Math.ceil(Math.log2(tableSize)));
+      const bytes = [...textBytes('GIF89a'), ...word(state.width), ...word(state.height), 0x80 | 0x70 | (Math.round(Math.log2(tableSize)) - 1), 0, 0];
+      // global color table; index 0 is transparent
+      bytes.push(0, 0, 0);
+      colorList.forEach(color => bytes.push(...hexToRGB(color)));
+      for (let i = colorList.length + 1; i < tableSize; i++) bytes.push(0, 0, 0);
+      // Netscape loop extension, repeat forever
+      bytes.push(0x21, 0xff, 0x0b, ...textBytes('NETSCAPE2.0'), 0x03, 0x01, 0x00, 0x00, 0x00);
+      const delay = Math.max(2, Math.round(100 / state.fps));
+      flattened.forEach(pixels => {
+        const indices = new Uint8Array(cellCount());
+        pixels.forEach((color, index) => { indices[index] = colorIndex.get(color.toLowerCase()) || 0; });
+        const compressed = lzwEncode(indices, minimumCodeSize);
+        bytes.push(0x21, 0xf9, 0x04, 0x09, ...word(delay), 0x00, 0x00); // disposal + transparent index
+        bytes.push(0x2c, 0x00,0x00,0x00,0x00, ...word(state.width), ...word(state.height), 0x00);
+        bytes.push(minimumCodeSize, ...bytesAsSubBlocks(compressed));
+      });
+      bytes.push(0x3b);
+      downloadBlob(new Blob([new Uint8Array(bytes)], { type: 'image/gif' }), `${slugify(state.projectName)}-${state.width}x${state.height}-loop.gif`);
+      showToast(`GIF ${state.width}×${state.height} из ${state.frames.length} ${plural(state.frames.length, 'кадра', 'кадров', 'кадров')} выгружен.`);
+    }
+    function exportProject() {
+      const content = JSON.stringify(getProjectData(), null, 2);
+      downloadBlob(new Blob([content], { type: 'application/json' }), `${slugify(state.projectName)}.pixelport`);
+      showToast('Файл проекта готов к переносу.');
+    }
+    function handleExport(type) {
+      $('#exportWrap').classList.remove('open');
+      if (type === 'png') exportPNG(); else if (type === 'gif') exportGIF(); else if (type === 'sheet') exportSpriteSheet(); else if (type === 'project') exportProject();
+    }
+
+    function saveLocal(silent = false) {
+      try {
+        state.projectName = $('#projectName').value.trim().slice(0, 48) || 'Новый пиксельный проект';
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(getProjectData()));
+        $('#savedState').textContent = '● сохранено';
+        if (!silent) showToast('Проект сохранён в этом браузере.');
+      } catch (error) {
+        $('#savedState').textContent = '● не сохранено';
+        if (!silent) showToast('Не удалось сохранить проект локально.', 'error');
+      }
+    }
+    function loadLocal() {
+      try { const raw = localStorage.getItem(STORAGE_KEY); if (raw) { restoreProject(JSON.parse(raw)); return true; } } catch (error) { localStorage.removeItem(STORAGE_KEY); }
+      return false;
+    }
+    function importProject(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          stopPlayback(); restoreProject(JSON.parse(reader.result)); renderAll(); saveLocal(true); showToast(`Открыт проект «${state.projectName}».`);
+        } catch (error) { showToast(`Импорт не удался: ${error.message}`, 'error'); }
+      };
+      reader.readAsText(file);
+    }
+    function rgbHex(r, g, b) { return `#${[r,g,b].map(value => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0')).join('')}`; }
+    function closestPaletteColor(r, g, b, palette) {
+      let best = palette[0] || '#000000', bestDistance = Infinity;
+      palette.forEach(color => {
+        const [pr, pg, pb] = hexToRGB(color);
+        const distance = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2;
+        if (distance < bestDistance) { bestDistance = distance; best = color; }
+      });
+      return best;
+    }
+    function paletteFromImage(data, limit) {
+      const buckets = new Map();
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] < 24) continue;
+        // Group nearby source colours before choosing the most frequent ones.
+        const key = `${data[i] >> 4},${data[i + 1] >> 4},${data[i + 2] >> 4}`;
+        const bucket = buckets.get(key) || { r: 0, g: 0, b: 0, count: 0 };
+        bucket.r += data[i]; bucket.g += data[i + 1]; bucket.b += data[i + 2]; bucket.count++;
+        buckets.set(key, bucket);
+      }
+      const palette = Array.from(buckets.values()).sort((a,b) => b.count - a.count).slice(0, limit).map(bucket => rgbHex(bucket.r / bucket.count, bucket.g / bucket.count, bucket.b / bucket.count));
+      return palette.length ? palette : [...DEFAULT_PALETTE.slice(0, limit)];
+    }
+    function importRaster(image, sourceName = 'изображение') {
+      try {
+        const useNative = $('#imageNativeSize').checked;
+        const targetWidth = useNative ? normalizeDimension(image.naturalWidth || image.width, 'Ширина файла') : state.width;
+        const targetHeight = useNative ? normalizeDimension(image.naturalHeight || image.height, 'Высота файла') : state.height;
+        if (!confirmHeavyGrid(targetWidth, targetHeight, 'Импорт изображения')) return;
+        stopPlayback();
+        pushHistory();
+        if (useNative && (targetWidth !== state.width || targetHeight !== state.height)) resizeProjectTo(targetWidth, targetHeight, { ask: false, history: false, validate: false, reason: 'Импорт изображения' });
+        const sampler = makeCleanCanvas(state.width, state.height);
+        const samplerCtx = sampler.getContext('2d', { willReadFrequently: true });
+        samplerCtx.imageSmoothingEnabled = false;
+        samplerCtx.clearRect(0, 0, state.width, state.height);
+        samplerCtx.drawImage(image, 0, 0, state.width, state.height);
+        const pixels = samplerCtx.getImageData(0, 0, state.width, state.height).data;
+        const paletteMode = $('#imagePaletteMode').value;
+        const importPalette = paletteMode === 'current' ? [...state.palette] : paletteFromImage(pixels, Number(paletteMode));
+        if (paletteMode !== 'current') state.palette = importPalette.slice(0, 64);
+        const lookup = new Map();
+        const colorFor = (r, g, b) => {
+          const raw = rgbHex(r, g, b).toLowerCase();
+          if (!lookup.has(raw)) lookup.set(raw, closestPaletteColor(r, g, b, importPalette).toLowerCase());
+          return lookup.get(raw);
+        };
+        const frame = state.frames[state.activeFrame];
+        if ($('#imageImportMode').value === 'replace') frame.layers[state.activeLayer] = makeLayer();
+        for (let y = 0; y < state.height; y++) for (let x = 0; x < state.width; x++) {
+          const offset = (y * state.width + x) * 4;
+          if (pixels[offset + 3] < 24) continue;
+          setCell(frame, state.activeLayer, x, y, colorFor(pixels[offset], pixels[offset + 1], pixels[offset + 2]));
+        }
+        if (paletteMode !== 'current' && importPalette.length) state.selectedColor = importPalette[0].toLowerCase();
+        renderAll(); saveLocal(true); showView('studio');
+        appendAgentLog(`с устройства импортирован(а) ${sourceName} → слой «${state.layers[state.activeLayer].name}»`);
+        showToast(`«${sourceName}» превращён(а) в редактируемые пиксели.`);
+      } catch (error) { showToast(`Не удалось загрузить изображение: ${error.message}`, 'error'); }
+    }
+    function importDeviceImage(file) {
+      if (!file) return;
+      if (!file.type || !file.type.startsWith('image/')) return showToast('Нужен файл изображения: PNG, JPG, WEBP, GIF или BMP.', 'warn');
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => importRaster(image, file.name || 'изображение');
+        image.onerror = () => showToast('Браузер не смог прочитать этот файл изображения.', 'error');
+        image.src = reader.result;
+      };
+      reader.onerror = () => showToast('Не удалось прочитать файл с устройства.', 'error');
+      reader.readAsDataURL(file);
+    }
+
+    const galleryItems = [
+      { id:'meteor', category:'loop', title:'Метеорный сад', description:'Четырёхкадровый бот с кистью и звёздной пылью.', author:'PIXELPORT / старт', tag:'4 кадра' },
+      { id:'lighthouse', category:'scene', title:'Сигнальная башня', description:'Тёплое окно, холодное море и световой луч.', author:'Ручной паттерн', tag:'сцена' },
+      { id:'jelly', category:'loop', title:'Медуза-радио', description:'Плавающий спрайт с меняющимся сигналом.', author:'Ручной паттерн', tag:'луп 3' },
+      { id:'courier', category:'sprite', title:'Курьер № 9', description:'Игровой персонаж с контуром и светом на слоях.', author:'Ручной паттерн', tag:'спрайт' },
+      { id:'sunset', category:'scene', title:'Город после солнца', description:'Палитра из девяти цветов для тихого пейзажа.', author:'Ручной паттерн', tag:'сцена' },
+      { id:'crystal', category:'loop', title:'Кристальный импульс', description:'Эффект сияния, готовый для цикла интерфейса.', author:'Ручной паттерн', tag:'луп 2' }
+    ];
+    function drawGalleryArt(target, kind) {
+      const n = 16, s = 12; target.width = target.height = n * s;
+      const t = target.getContext('2d'); t.imageSmoothingEnabled = false; t.clearRect(0,0,target.width,target.height);
+      const px = (x,y,color,w=1,h=1) => { t.fillStyle=color; t.fillRect(x*s,y*s,w*s,h*s); };
+      const colors = { d:'#0a1730', n:'#172a49', b:'#2c5178', s:'#4c9fe4', c:'#7be9eb', w:'#e8f4ff', y:'#ffd55d', o:'#ff9668', p:'#fc7193', v:'#a685f7', g:'#7ad58e' };
+      px(0,0,colors.d,n,n);
+      if (kind === 'meteor') {
+        // manually arranged miniature of the studio mascot
+        [[2,2,'y'],[13,3,'c'],[2,10,'p'],[12,13,'y'],[7,1,'v']].forEach(([x,y,c])=>px(x,y,colors[c]));
+        px(6,3,colors.n,4,1); px(5,4,colors.n,6,1); px(4,5,colors.n,8,3); px(5,5,colors.b,6,2); px(6,5,colors.c,2,1); px(9,5,colors.w,1,1);
+        px(4,8,colors.n,8,4); px(5,9,colors.s,6,2); px(6,10,colors.n,1,1); px(9,10,colors.n,1,1); px(7,10,colors.y,2,1); px(3,9,colors.n,1,2); px(12,9,colors.n,2,1); px(6,12,colors.n,1,2); px(10,12,colors.n,1,2);
+      } else if (kind === 'lighthouse') {
+        px(0,11,colors.b,16,5); px(0,13,colors.s,16,1); px(0,15,colors.c,16,1); px(6,3,colors.n,4,9); px(7,4,colors.w,2,7); px(5,2,colors.n,6,2); px(6,1,colors.o,4,1); px(8,0,colors.y,1,3); px(9,1,colors.y,7,1); px(12,2,colors.y,4,1); px(1,9,colors.v,3,1); px(2,8,colors.v,1,1);
+      } else if (kind === 'jelly') {
+        px(5,3,colors.v,6,1); px(4,4,colors.v,8,1); px(3,5,colors.v,10,3); px(4,8,colors.p,8,2); px(5,10,colors.p,1,3); px(7,10,colors.c,1,4); px(9,10,colors.p,1,3); px(11,10,colors.c,1,4); px(6,6,colors.w,1,1); px(9,6,colors.w,1,1); px(0,2,colors.c); px(14,4,colors.y); px(2,12,colors.s,2,1); px(12,13,colors.s,3,1);
+      } else if (kind === 'courier') {
+        px(5,2,colors.y,6,2); px(4,4,colors.n,8,5); px(5,4,colors.o,6,3); px(6,5,colors.n,1,1); px(9,5,colors.n,1,1); px(5,9,colors.n,6,4); px(6,9,colors.s,4,3); px(3,10,colors.n,2,1); px(11,10,colors.n,2,1); px(6,13,colors.n,1,2); px(9,13,colors.n,1,2); px(1,14,colors.c,3,1); px(13,3,colors.p,2,1);
+      } else if (kind === 'sunset') {
+        px(0,0,colors.v,16,6); px(0,6,colors.p,16,3); px(0,9,colors.o,16,2); px(0,11,colors.n,16,5); px(10,2,colors.y,4,4); px(2,8,colors.n,2,3); px(5,7,colors.n,3,4); px(9,8,colors.n,2,3); px(12,6,colors.n,3,5); px(0,13,colors.b,16,1); px(2,13,colors.c,3,1); px(9,13,colors.c,4,1);
+      } else if (kind === 'crystal') {
+        px(0,0,colors.d,16,16); px(7,1,colors.c,2,2); px(6,3,colors.s,4,2); px(5,5,colors.v,6,4); px(4,9,colors.v,8,2); px(6,11,colors.s,4,2); px(7,13,colors.c,2,2); px(7,5,colors.w,2,5); px(2,4,colors.c); px(13,3,colors.y); px(2,12,colors.p); px(13,12,colors.c);
+      }
+    }
+    function renderGallery(filter = 'all') {
+      const list = filter === 'all' ? galleryItems : galleryItems.filter(item => item.category === filter);
+      $('#galleryCount').textContent = `${String(list.length).padStart(2,'0')} ${plural(list.length, 'ручная заготовка', 'ручные заготовки', 'ручных заготовок')}`;
+      $('#galleryGrid').innerHTML = list.map(item => `<article class="art-card" data-category="${item.category}"><div class="art-preview"><canvas data-gallery-art="${item.id}" aria-label="Пиксельная заготовка ${escapeHtml(item.title)}"></canvas></div><div class="art-card-body"><div class="art-card-head"><h3>${escapeHtml(item.title)}</h3><span class="chip">${item.tag}</span></div><p>${escapeHtml(item.description)}</p><div class="art-card-actions"><span class="byline">${item.author}</span><button class="button tiny" data-load-preset="${item.id}">открыть</button></div></div></article>`).join('');
+      $$('canvas[data-gallery-art]').forEach(item => drawGalleryArt(item, item.dataset.galleryArt));
+    }
+    function clearAllFrames() { state.frames.forEach(frame => { frame.layers = frame.layers.map(() => makeLayer()); }); }
+    function presetPixel(frame, layer, x, y, color) { setCell(frame, layer, x, y, color); }
+    function createPreset(kind) {
+      stopPlayback(); pushHistory();
+      state.projectName = galleryItems.find(item => item.id === kind)?.title || 'Пиксельная сцена';
+      state.width = 32;
+      state.height = 32;
+      state.agentTasks = [];
+      state.agentBrief = '';
+      state.layers = layerDefaults.map(l => ({ id:nextId('layer'), ...l }));
+      state.frames = [];
+      const count = kind === 'jelly' ? 3 : kind === 'crystal' ? 2 : kind === 'meteor' ? 4 : 1;
+      for (let i = 0; i < count; i++) state.frames.push(makeFrame(`Кадр ${String(i + 1).padStart(2, '0')}`));
+      if (kind === 'meteor') state.frames.forEach((frame, i) => drawMeteorBot(frame, i));
+      else state.frames.forEach((frame, frameIndex) => drawPresetScene(frame, kind, frameIndex));
+      state.activeFrame = 0; state.activeLayer = 0; renderAll(); saveLocal(true); showView('studio'); showToast(`«${state.projectName}» открыт в студии.`);
+    }
+    function drawPresetScene(frame, kind, variant) {
+      const c = { d:'#081020', n:'#172a49', b:'#2c5178', s:'#4c9fe4', c:'#7be9eb', w:'#e8f4ff', y:'#ffd55d', o:'#ff9668', p:'#fc7193', v:'#a685f7', g:'#7ad58e' };
+      const r = (l,x,y,w,h,color) => paintRect(frame,l,x,y,w,h,color);
+      const pt = (l, arr, color) => paintList(frame,l,arr,color);
+      if (kind === 'lighthouse') {
+        r(0,0,22,32,10,c.b); r(0,0,26,32,6,c.s); r(1,0,29,32,1,c.c);
+        r(0,13,7,7,17,c.n); r(0,14,8,5,15,c.w); r(0,11,5,11,3,c.n); r(1,13,4,7,1,c.o); r(1,15,6,2,3,c.y); r(1,17,5,1,2,c.y);
+        pt(2,[[23,6],[24,6],[25,6],[26,6],[27,6],[28,6],[29,6],[30,6],[25,5],[26,5],[27,5],[28,5]],c.y);
+        pt(2,[[3,20],[4,19],[5,18],[6,20],[7,21],[28,18],[29,17],[30,19]],c.v);
+      } else if (kind === 'jelly') {
+        pt(2,[[4,4],[25,5],[7,25],[27,23],[2,16],[29,14]],c.c);
+        r(0,10,7,12,1,c.v); r(0,8,8,16,2,c.v); r(0,7,10,18,7,c.v); r(0,8,17,16,2,c.p); r(1,10,10,12,5,c.p); r(1,12,11,2,1,c.w); r(1,18,11,2,1,c.w);
+        [[10,19],[12,20],[15,19],[18,20],[21,19]].forEach(([x,y],idx) => { r(0,x,y,1,7+(idx%2),c.p); r(1,x,y+1,1,5,idx===variant%2?c.c:c.s); });
+        pt(2,[[14,8],[15,8],[16,8]],variant === 1 ? c.y : c.c);
+      } else if (kind === 'courier') {
+        r(0,11,5,10,3,c.y); r(0,9,8,14,9,c.n); r(1,10,9,12,6,c.o); pt(0,[[12,11],[13,11],[18,11],[19,11]],c.n); pt(1,[[13,11],[18,11]],c.w); r(0,10,17,12,8,c.n); r(1,11,18,10,5,c.s); r(0,7,19,3,3,c.n); r(0,22,18,4,4,c.n); r(0,12,25,2,4,c.n); r(0,18,25,2,4,c.n); pt(2,[[4,26],[5,26],[6,26],[25,7],[26,7]],c.c);
+      } else if (kind === 'sunset') {
+        r(0,0,0,32,11,c.v); r(0,0,11,32,6,c.p); r(0,0,17,32,5,c.o); r(0,0,22,32,10,c.n); r(1,20,4,8,8,c.y); r(0,1,18,4,7,c.n); r(0,6,15,5,10,c.n); r(0,13,17,3,8,c.n); r(0,18,14,5,11,c.n); r(0,25,16,5,9,c.n); r(1,0,27,32,1,c.b); pt(1,[[4,27],[5,27],[6,27],[15,27],[16,27],[27,27],[28,27]],c.c);
+      } else if (kind === 'crystal') {
+        pt(2,[[3,5],[27,4],[5,25],[25,26],[15,2],[30,16]],c.c);
+        r(0,14,3,4,3,c.c); r(0,12,6,8,4,c.s); r(0,10,10,12,8,c.v); r(0,8,18,16,3,c.v); r(0,11,21,10,5,c.s); r(0,14,26,4,3,c.c); r(1,14,7,4,14,c.w); r(1,12,11,2,7,c.c); r(1,18,11,2,7,c.c); pt(2,variant===0?[[7,14],[24,14],[15,0]]:[[6,13],[25,15],[16,30]],c.y);
+      }
+    }
+
+    const agents = [
+      { id:'byte', name:'Байт', role:'контурный агент', note:'Прокладывает короткий бирюзовый контур в свободной зоне.', speed:'12 px/ход', layer:'Контур', color:'#7be9eb' },
+      { id:'luma', name:'Люма', role:'агент света', note:'Ставит тёплые блики по маленькой диагонали.', speed:'8 px/ход', layer:'Свет', color:'#ffd55d' },
+      { id:'spark', name:'Искра', role:'агент эффектов', note:'Добавляет четыре звёздных пикселя без изменения силуэта.', speed:'4 px/ход', layer:'FX', color:'#fc7193' }
+    ];
+    function drawAgentAvatar(target, agent) {
+      target.width = target.height = 50; const a = target.getContext('2d'); const p=5;
+      a.fillStyle='#09172c'; a.fillRect(0,0,50,50);
+      const px=(x,y,c,w=1,h=1)=>{a.fillStyle=c;a.fillRect(x*p,y*p,w*p,h*p);};
+      const c=agent.color, n='#172a49', b='#2c5178', w='#e8f4ff';
+      if(agent.id==='byte'){ px(3,1,c,4,1); px(2,2,n,6,5); px(3,3,b,4,2); px(3,3,w); px(5,3,w); px(4,5,c,2,1); px(1,4,n); px(8,4,n); px(3,7,n); px(6,7,n); }
+      if(agent.id==='luma'){ px(4,0,c,2,1); px(3,1,n,4,1); px(2,2,n,6,4); px(3,2,b,4,3); px(3,3,w); px(5,3,w); px(4,4,c,2,1); px(1,6,n,2,1); px(7,6,n,2,1); px(3,6,n); px(6,6,n); }
+      if(agent.id==='spark'){ px(4,1,c,2,2); px(2,3,c,6,4); px(1,4,n,8,2); px(3,4,w); px(6,4,w); px(4,6,c,2,2); px(0,1,'#7be9eb'); px(9,8,'#ffd55d'); px(1,8,'#a685f7'); }
+    }
+    function renderAgents() {
+      $('#agentsGrid').innerHTML = agents.map(agent => `<article class="agent-card"><div class="agent-head"><canvas class="agent-avatar" data-agent-avatar="${agent.id}" aria-label="Пиксельный аватар ${agent.name}"></canvas><div><h3>${agent.name}</h3><div class="agent-role">${agent.role}</div></div></div><p>${agent.note}</p><div class="agent-stat"><span>ТЕМП<b>${agent.speed}</b></span><span>СЛОЙ<b>${agent.layer}</b></span></div><button class="button tiny" data-agent-move="${agent.id}">ручной ход →</button></article>`).join('');
+      $$('canvas[data-agent-avatar]').forEach(item => drawAgentAvatar(item, agents.find(agent => agent.id === item.dataset.agentAvatar)));
+    }
+    function agentMove(id, { target = 'active', brief = '', taskId = null, openStudio = true } = {}) {
+      const agent = agents.find(item => item.id === id); if (!agent) return;
+      stopPlayback(); pushHistory();
+      const layerIndex = id === 'byte' ? 0 : id === 'luma' ? Math.min(1, state.layers.length - 1) : Math.min(2, state.layers.length - 1);
+      const patterns = {
+        byte: [[3,3],[4,3],[5,3],[3,4],[5,4],[3,5],[4,5],[5,5],[6,5]],
+        luma: [[23,7],[24,8],[25,9],[24,10],[23,11],[22,12]],
+        spark: [[27,5],[26,5],[28,5],[27,4],[27,6],[7,25],[8,25],[7,26]]
+      };
+      const targets = target === 'all' ? state.frames.map((_, index) => index) : [state.activeFrame];
+      targets.forEach(frameIndex => {
+        const frame = state.frames[frameIndex];
+        const offset = (frameIndex * 3 + state.layers.length) % Math.max(1, Math.min(7, state.width));
+        patterns[id].forEach(([x, y], index) => setCell(frame, layerIndex, (x + offset + index % 2) % state.width, y % state.height, agent.color));
+      });
+      if (taskId) { const task = state.agentTasks.find(item => item.id === taskId); if (task) task.status = 'done'; }
+      state.activeLayer = layerIndex;
+      renderAll(); saveLocal(true);
+      const scope = target === 'all' ? `во все ${state.frames.length} кадров` : 'в активный кадр';
+      appendAgentLog(`${agent.name} сделал(а) ход: ${patterns[id].length} px ${scope} → ${state.layers[layerIndex].name}${brief ? ` · ${brief.slice(0, 44)}` : ''}`);
+      if (openStudio) showView('studio');
+      showToast(`<b>${agent.name}</b> добавил(а) вручную заданный штрих.`, '');
+    }
+    async function queueAgentTask() {
+      const text = $('#agentBrief').value.trim();
+      const agentId = $('#briefAgent').value;
+      const target = $('#briefTarget').value;
+      if (!text) return showToast('Опиши агенту хотя бы один пиксельный жест.', 'warn');
+      if (state.agentTasks.filter(task => task.status === 'queued' || task.status === 'claimed').length >= 12) return showToast('В очереди максимум 12 заданий — выполни или убери часть.', 'warn');
+      const agent = agents.find(item => item.id === agentId) || agents[0];
+      const task = { id: nextId('task'), agentId: agent.id, target: target === 'all' ? 'all' : 'active', frame: state.activeFrame, layer: state.activeLayer, text: text.slice(0, 280), status: 'queued' };
+      // Once the room is live, the queue becomes a real API job that other agents can claim.
+      if (remote.projectId) {
+        try {
+          const payload = await apiRequest(`/api/projects/${encodeURIComponent(remote.projectId)}/jobs`, {
+            method: 'POST', body: { action: 'create', description: task.text, target: task.target, frame: state.activeFrame, layer: state.activeLayer, if_revision: remote.revision }
+          });
+          task.id = payload.result.job.id;
+          remote.revision = payload.revision;
+          remote.lastEvent = payload.event_id || remote.lastEvent;
+          persistRemoteSession(); renderRemoteUI();
+        } catch (error) { return showToast(`Не удалось поставить API-задачу: ${error.message}`, 'error'); }
+      }
+      state.agentTasks.unshift(task);
+      state.agentBrief = '';
+      $('#agentBrief').value = '';
+      renderAgentWorkspace(); saveLocal(true);
+      appendAgentLog(`${remote.projectId ? 'API-задача' : 'задание'} для ${agent.name}: ${text.slice(0, 55)}`);
+      showToast(`Задание поставлено в ${remote.projectId ? 'API-' : ''}очередь: <b>${agent.name}</b>.`);
+    }
+    async function runQueuedTask(taskId) {
+      const task = state.agentTasks.find(item => item.id === taskId);
+      if (!task) return;
+      agentMove(task.agentId, { target: task.target, brief: task.text, taskId, openStudio: false });
+      renderAgentWorkspace();
+      if (remote.projectId) await pushRemoteProject();
+    }
+    async function removeQueuedTask(taskId) {
+      const task = state.agentTasks.find(item => item.id === taskId);
+      if (remote.projectId && task) {
+        try {
+          const payload = await apiRequest(`/api/projects/${encodeURIComponent(remote.projectId)}/jobs`, { method: 'POST', body: { action: 'cancel', job_id: taskId, if_revision: remote.revision } });
+          remote.revision = payload.revision;
+          remote.lastEvent = payload.event_id || remote.lastEvent;
+          persistRemoteSession(); renderRemoteUI();
+        } catch (error) { return showToast(`Не удалось убрать API-задачу: ${error.message}`, 'error'); }
+      }
+      state.agentTasks = state.agentTasks.filter(item => item.id !== taskId);
+      renderAgentWorkspace(); saveLocal(true);
+      if (task) appendAgentLog(`задание снято: ${task.text.slice(0, 45)}`);
+    }
+    function copyAgentProtocol() {
+      const protocol = {
+        type: 'PIXELPORT_AGENT_PROTOCOL', version: 1,
+        project: state.projectName, canvas: { width: state.width, height: state.height },
+        active: { frame: state.activeFrame + 1, layer: state.layers[state.activeLayer]?.name },
+        palette: state.palette, tasks: state.agentTasks.filter(task => task.status !== 'done').map(({agentId,target,text}) => ({agentId,target,text})),
+        handoff: 'All marks must be explicit editable pixels. No image generation.'
+      };
+      const payload = JSON.stringify(protocol, null, 2);
+      const done = () => { appendAgentLog('протокол скопирован для внешнего агента'); showToast('Агентный протокол скопирован.'); };
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(payload).then(done).catch(() => fallbackCopy(payload, done));
+      else fallbackCopy(payload, done);
+    }
+    function fallbackCopy(text, onDone) {
+      const area = document.createElement('textarea'); area.value = text; area.style.position = 'fixed'; area.style.opacity = '0'; document.body.appendChild(area); area.select();
+      try { document.execCommand('copy'); onDone(); } catch (error) { showToast('Не удалось скопировать: выгрузи файл проекта.', 'warn'); }
+      area.remove();
+    }
+    function appendAgentLog(message) {
+      const log=$('#agentLog'); const now=new Date(); const time=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+      const div=document.createElement('div'); div.innerHTML=`<b>${time}</b> ${escapeHtml(message)}`; log.appendChild(div); log.scrollTop=log.scrollHeight;
+    }
+
+    function showToast(message, type = '') {
+      const toast = $('#toast'); clearTimeout(toastTimer); toast.innerHTML = message; toast.className = `toast ${type}`.trim(); requestAnimationFrame(() => toast.classList.add('show'));
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+    function showView(name) {
+      $$('.view').forEach(view => view.classList.toggle('active', view.dataset.viewPane === name));
+      $$('.nav-button').forEach(button => button.classList.toggle('active', button.dataset.view === name));
+      if (name === 'frames') renderFrameUI();
+      if (name === 'gallery') renderGallery($('.filter.active')?.dataset.filter || 'all');
+      if (name === 'agents') { renderAgents(); renderAgentWorkspace(); }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function bindEvents() {
+      // Navigation
+      $$('.nav-button').forEach(button => button.addEventListener('click', () => showView(button.dataset.view)));
+      // Live HTTP room for real agents
+      $('#createRemoteProjectBtn').addEventListener('click', createRemoteProject);
+      $('#pushRemoteProjectBtn').addEventListener('click', pushRemoteProject);
+      $('#pullRemoteProjectBtn').addEventListener('click', () => pullRemoteProject());
+      $('#connectRemoteBtn').addEventListener('click', connectRemoteProject);
+      $('#watchRemoteBtn').addEventListener('click', toggleRemoteWatch);
+      $('#mintAgentKeyBtn').addEventListener('click', mintRemoteAgentKey);
+      $('#copyAgentCurlBtn').addEventListener('click', copyAgentCurl);
+      $('#issuedAgentKey').addEventListener('click', () => {
+        if (!remote.lastIssuedKey) return;
+        const done = () => showToast('Ключ агента скопирован. Передай его только этому агенту.');
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(remote.lastIssuedKey).then(done).catch(() => fallbackCopy(remote.lastIssuedKey, done));
+        else fallbackCopy(remote.lastIssuedKey, done);
+      });
+      // Tools / color
+      $('#toolGrid').addEventListener('click', event => { const button = event.target.closest('[data-tool]'); if (button) setTool(button.dataset.tool); });
+      $('#brushSizeControls').addEventListener('click', event => { const button = event.target.closest('[data-size]'); if (!button) return; state.brushSize = Number(button.dataset.size); renderTools(); });
+      $('#symmetryToggle').addEventListener('change', event => { state.symmetry = event.target.checked; saveLocal(true); });
+      $('#gridToggle').addEventListener('change', event => { state.showGrid = event.target.checked; renderCanvas(); saveLocal(true); });
+      $('#onionToggle').addEventListener('change', event => { state.onion = event.target.checked; renderCanvas(); saveLocal(true); });
+      $('#palette').addEventListener('click', event => { const button = event.target.closest('[data-color]'); if (button) setColor(button.dataset.color); });
+      $('#customColor').addEventListener('input', event => setColor(event.target.value));
+      $('#addColorBtn').addEventListener('click', () => setColor($('#customColor').value, true));
+      // Canvas pointer behavior
+      canvas.addEventListener('pointerdown', event => {
+        if (event.button !== 0 && event.pointerType !== 'touch') return;
+        stopPlayback(); canvas.setPointerCapture?.(event.pointerId); drawing = true; mutationInStroke = false; lastPoint = pointFromEvent(event);
+        const changed = applyAt(lastPoint);
+        if (changed) { renderCanvas(); renderStats(); }
+        if (state.tool === 'fill' || state.tool === 'picker') finishStroke();
+        event.preventDefault();
+      });
+      canvas.addEventListener('pointermove', event => {
+        const point = pointFromEvent(event); $('#pixelReadout').textContent = `x: ${String(point.x).padStart(2,'0')} / y: ${String(point.y).padStart(2,'0')}`;
+        if (!drawing || !lastPoint || (state.tool !== 'brush' && state.tool !== 'eraser')) return;
+        drawBetween(lastPoint, point); lastPoint = point; renderCanvas(); renderStats(); event.preventDefault();
+      });
+      canvas.addEventListener('pointerleave', () => { if (!drawing) $('#pixelReadout').textContent = 'x: — / y: —'; });
+      canvas.addEventListener('pointerup', finishStroke); canvas.addEventListener('pointercancel', finishStroke);
+      // Layers
+      $('#layerList').addEventListener('click', event => {
+        const toggle = event.target.closest('[data-toggle-layer]');
+        if (toggle) { const i=Number(toggle.dataset.toggleLayer); state.layers[i].visible=!state.layers[i].visible; renderCanvas(); renderLayers(); saveLocal(true); return; }
+        const row = event.target.closest('[data-layer]'); if (row) { state.activeLayer=Number(row.dataset.layer); renderLayers(); }
+      });
+      $('#layerList').addEventListener('dblclick', event => {
+        const row = event.target.closest('[data-layer]'); if (!row) return; const i=Number(row.dataset.layer); const next=prompt('Название слоя:',state.layers[i].name); if(next && next.trim()){ state.layers[i].name=next.trim().slice(0,32); renderLayers(); saveLocal(true); }
+      });
+      $('#addLayerBtn').addEventListener('click', addLayer); $('#deleteLayerBtn').addEventListener('click', deleteLayer);
+      $('#clearLayerBtn').addEventListener('click', clearActiveLayer); $('#flipLayerBtn').addEventListener('click', flipActiveLayer);
+      $('#opacityRange').addEventListener('input', event => { const value=Number(event.target.value); state.layers[state.activeLayer].opacity=value/100; $('#opacityLabel').textContent=`${value}%`; $('#opacityOutput').textContent=value; renderCanvas(); saveLocal(true); });
+      // Frames
+      const frameClick = event => { const card=event.target.closest('[data-frame]'); if(card){ stopPlayback(); state.activeFrame=Number(card.dataset.frame); renderAll(); return; } if(event.target.closest('[data-add-frame]')) addFrame(false); };
+      $('#frameStrip').addEventListener('click', frameClick); $('#frameStripSecondary').addEventListener('click', frameClick);
+      $('#newFrameBtn').addEventListener('click',()=>addFrame(false)); $('#duplicateFrameBtn').addEventListener('click',()=>addFrame(true)); $('#deleteFrameBtn').addEventListener('click',deleteFrame);
+      $$('[data-frame-action]').forEach(button => button.addEventListener('click',()=>{ const action=button.dataset.frameAction; if(action==='new')addFrame(false); if(action==='duplicate')addFrame(true); if(action==='delete')deleteFrame(); }));
+      $('#playBtn').addEventListener('click',togglePlayback); $('#playBtnSecondary').addEventListener('click',togglePlayback);
+      $('#fpsInput').addEventListener('change', event=>setFps(event.target.value)); $('#fpsInputSecondary').addEventListener('change', event=>setFps(event.target.value));
+      // Project / resolution / device import
+      $('#resizeBtn').addEventListener('click', resizeProject);
+      $('#swapResolutionBtn').addEventListener('click', swapResolution);
+      $$('.resolution-preset').forEach(button => button.addEventListener('click', () => { const [width, height] = button.dataset.resolution.split('x').map(Number); useResolutionPreset(width, height); }));
+      $('#zoomRange').addEventListener('input', event => { state.zoom = Number(event.target.value); renderCanvas(); $('#zoomLabel').textContent = `${Math.round(state.zoom * 100)}%`; saveLocal(true); });
+      $('#saveBtn').addEventListener('click',()=>saveLocal());
+      $('#projectName').addEventListener('change',()=>{ state.projectName=$('#projectName').value.trim() || 'Новый пиксельный проект'; saveLocal(true); });
+      $('#importBtn').addEventListener('click',()=>$('#importProject').click());
+      $('#importProject').addEventListener('change',event=>{ importProject(event.target.files[0]); event.target.value = ''; });
+      const chooseImage = () => $('#imageImportInput').click();
+      $('#deviceImageBtn').addEventListener('click', chooseImage);
+      $('#deviceImagePanelBtn').addEventListener('click', chooseImage);
+      $('#imageImportInput').addEventListener('change', event => { importDeviceImage(event.target.files[0]); event.target.value = ''; });
+      $('#exportBtn').addEventListener('click', event=>{ event.stopPropagation(); $('#exportWrap').classList.toggle('open'); });
+      $('#exportMenu').addEventListener('click', event=>{ const choice=event.target.closest('[data-export]'); if(choice)handleExport(choice.dataset.export); });
+      document.addEventListener('click',event=>{ if(!event.target.closest('#exportWrap')) $('#exportWrap').classList.remove('open'); });
+      $$('[data-export-direct]').forEach(button=>button.addEventListener('click',()=>handleExport(button.dataset.exportDirect)));
+      // Gallery and agents
+      $('.gallery-filters').addEventListener('click',event=>{const button=event.target.closest('[data-filter]');if(!button)return;$$('.filter').forEach(item=>item.classList.toggle('active',item===button));renderGallery(button.dataset.filter);});
+      $('#galleryGrid').addEventListener('click', event=>{const button=event.target.closest('[data-load-preset]');if(button)createPreset(button.dataset.loadPreset);});
+      $('#agentsGrid').addEventListener('click',event=>{const button=event.target.closest('[data-agent-move]');if(button)agentMove(button.dataset.agentMove);});
+      $('#queueTaskBtn').addEventListener('click', queueAgentTask);
+      $('#agentBrief').addEventListener('input', event => { state.agentBrief = event.target.value.slice(0, 280); saveLocal(true); });
+      $('#agentQueue').addEventListener('click', event => { const run = event.target.closest('[data-run-task]'); const remove = event.target.closest('[data-remove-task]'); if (run) runQueuedTask(run.dataset.runTask); if (remove) removeQueuedTask(remove.dataset.removeTask); });
+      $('#copyAgentProtocolBtn').addEventListener('click', copyAgentProtocol);
+      $('#openCanvasBtn').addEventListener('click', () => showView('studio'));
+      $('#clearAgentLog').addEventListener('click',()=>{ $('#agentLog').innerHTML='<div><b>--:--</b> журнал очищен</div>'; });
+      document.addEventListener('paste', event => {
+        const typing = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+        const item = Array.from(event.clipboardData?.items || []).find(candidate => candidate.type?.startsWith('image/'));
+        if (!typing && item) { event.preventDefault(); importDeviceImage(item.getAsFile()); }
+      });
+      // Keyboard shortcuts
+      document.addEventListener('keydown', event => {
+        const typing = ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? redo() : undo(); return; }
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); redo(); return; }
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { event.preventDefault(); saveLocal(); return; }
+        if (typing) return;
+        const key=event.key.toLowerCase();
+        if(key==='b')setTool('brush'); if(key==='e')setTool('eraser'); if(key==='f')setTool('fill'); if(key==='i')setTool('picker');
+        if(key==='g'){state.showGrid=!state.showGrid;renderTools();renderCanvas();}
+        if(event.code==='Space'){event.preventDefault();togglePlayback();}
+      });
+      window.addEventListener('beforeunload',()=>saveLocal(true));
+    }
+
+    // Start with the locally saved piece if present; otherwise create the hand-authored demo animation.
+    if (!loadLocal()) seedProject();
+    loadRemoteSession();
+    bindEvents(); renderGallery(); renderAgents(); renderAll();
+    if (remote.projectId) pullRemoteProject({ quiet: true });
+  })();
+  </script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a32267cbf88ddbad',t:'MTc4NzkxMDU2MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
